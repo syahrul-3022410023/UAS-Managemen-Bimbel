@@ -39,14 +39,7 @@ summary {
   cursor: pointer;
 }
 
-/* Prevent text selection flicker on touch for interactive elements */
-button,
-a,
-[role="button"],
-select {
-  -webkit-user-select: none;
-  user-select: none;
-}
+/* Hapus bagian prevent text selection flicker karena bisa memblokir klik di mobile */
 
 /* Fix iOS Safari input zoom — only applies when screen is narrow (mobile).
    font-size >= 16px prevents Safari from auto-zooming the page on input focus */
