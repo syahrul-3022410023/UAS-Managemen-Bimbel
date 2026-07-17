@@ -180,7 +180,7 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
       </section>
 
       {editing !== undefined && (
-        <div className="fixed inset-0 z-[60] flex items-end bg-slate-900/30 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6">
+        <div className="fixed inset-0 z-[60] flex items-end bg-slate-900/40 sm:items-center sm:justify-center sm:p-6">
           <form onSubmit={event => { event.preventDefault(); submit(event.currentTarget); }} className="w-full rounded-t-3xl bg-white p-6 shadow-2xl sm:max-w-xl sm:rounded-3xl">
             <div className="mb-6 flex justify-between">
               <div>

@@ -22,6 +22,42 @@ input {
   font: inherit;
 }
 
+/* ─── Global Mobile Touch Fix ───────────────────────────────────────────────
+   Ensures ALL interactive elements work consistently on iPhone & Android.
+   - touch-action: manipulation  → removes 300ms tap delay on iOS Safari
+   - cursor: pointer             → required for iOS Safari to fire click events
+   - -webkit-tap-highlight-color → removes default grey flash on tap
+────────────────────────────────────────────────────────────────────────── */
+button,
+a,
+[role="button"],
+select,
+label[for],
+summary {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+/* Prevent text selection flicker on touch for interactive elements */
+button,
+a,
+[role="button"],
+select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Fix iOS Safari input zoom — only applies when screen is narrow (mobile).
+   font-size >= 16px prevents Safari from auto-zooming the page on input focus */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
 /* Global typography overrides for heading elements */
 h1, h2, h3, h4, h5, h6 {
   font-weight: 700; /* Consistent font-bold weight */

@@ -80,7 +80,7 @@ function GenerateForm({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto bg-slate-900/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-slate-900/40">
       <div className="flex min-h-full items-end justify-center sm:items-center sm:p-6">
       <form
         onSubmit={(e) => { e.preventDefault(); submit(e.currentTarget); }}
