@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Search, Bell, Mail, HelpCircle, LogOut, User as UserIcon, Menu, X } from "lucide-react";
+import { Search, LogOut, Menu, X } from "lucide-react";
 import { logoutAction } from "@/lib/auth/actions";
 import { roleLabels, type UserRole } from "@/lib/auth/roles";
 import Link from "next/link";
@@ -21,12 +21,18 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   const displayName = name || email.split("@")[0];
   const initial = displayName.charAt(0).toUpperCase();
+
+  // Ensure portal is only rendered client-side
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Keyboard shortcut Cmd+K / Ctrl+K for search
   useEffect(() => {
@@ -45,40 +51,62 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Close profile dropdown when clicking outside
+  // Close profile dropdown when clicking/touching outside
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+    const handleOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (profileRef.current && !profileRef.current.contains(target)) {
         setIsProfileOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
   }, []);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobileMenuOpen]);
 
   const searchResults = searchQuery
     ? navigation.filter((n) => n.label.toLowerCase().includes(searchQuery.toLowerCase()))
     : [];
 
   return (
-    <header className="sticky top-0 z-40 bg-surface/80 backdrop-blur-xl border-b border-slate-200/50 px-4 sm:px-6 py-4 flex items-center justify-between">
+    // Removed backdrop-blur from sticky header — causes touch event blocking on Android
+    <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between shadow-sm">
+      {/* Mobile: Hamburger + Title */}
       <div className="flex items-center gap-3 sm:hidden">
         <button
           type="button"
           onClick={() => setIsMobileMenuOpen(true)}
-          style={{ touchAction: "manipulation" }}
-          className="relative z-50 flex items-center justify-center rounded-xl p-3 min-w-[44px] min-h-[44px] text-slate-500 hover:bg-slate-100 hover:text-brand active:bg-slate-200 transition"
+          style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent", minWidth: 44, minHeight: 44, padding: 10 }}
+          className="flex items-center justify-center rounded-xl bg-slate-100 text-slate-600 active:bg-slate-200 transition border-none cursor-pointer"
+          aria-label="Buka menu"
+          aria-expanded={isMobileMenuOpen}
         >
-          <Menu size={24} />
+          <Menu size={22} />
         </button>
         <p className="text-base font-semibold text-ink">{title}</p>
       </div>
-      
+
+      {/* Desktop: Title */}
       <p className="hidden sm:block mr-4 text-base font-semibold text-ink">{title}</p>
-      
-      {/* Search Bar */}
+
+      {/* Search Bar (Desktop only) */}
       <div className="relative flex-1 max-w-md hidden sm:block">
-        <div className={`flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border transition ${isSearchFocused ? 'border-brand/30 ring-2 ring-brand/10' : 'border-slate-100'}`}>
+        <div className={`flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border transition ${isSearchFocused ? "border-brand/30 ring-2 ring-brand/10" : "border-slate-100"}`}>
           <Search size={16} className="text-slate-400" />
           <input
             ref={searchInputRef}
@@ -91,14 +119,15 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
             className="bg-transparent border-none outline-none text-sm w-full text-slate-700 placeholder-slate-400"
           />
         </div>
-        
+
         {/* Search Results Dropdown */}
         {isSearchFocused && searchQuery && (
-          <div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-xl border border-slate-100 py-2 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+          <div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-xl border border-slate-100 py-2 overflow-hidden z-50">
             {searchResults.length > 0 ? (
               searchResults.map((item) => (
                 <button
                   key={item.label}
+                  type="button"
                   onMouseDown={() => router.push(item.href)}
                   className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-brand transition"
                 >
@@ -113,36 +142,21 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
         )}
       </div>
 
-      {/* Right Actions */}
+      {/* Right: Profile */}
       <div className="flex items-center gap-2 ml-auto">
-        <div className="relative">
-          <button 
-            onClick={() => {
-              // Close profile if open
-              if (isProfileOpen) setIsProfileOpen(false);
-              // Toggle more menu (we will just reuse isProfileOpen for simplicity or create a new state)
-              // Actually since it's just dummy icons, let's just make it a hover or simple click.
-              // We'll use a new state if needed, or simply hide them as requested by user.
-              // Wait, the user said "hilangkan gapapa". Let's just remove them to make it clean!
-            }}
-            className="hidden" // Hiding them entirely as they are just dummy placeholders for now and user said 'hilangkan gapapa'
-          >
-          </button>
-        </div>
-
-        {/* User Profile Dropdown */}
         <div className="relative" ref={profileRef}>
-          <button 
+          <button
+            type="button"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="flex items-center gap-2 hover:opacity-80 transition ml-1"
+            style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-tr from-brand to-cyan-400 text-white font-medium text-sm shadow-sm hover:opacity-80 transition ml-1"
+            aria-label="Profil"
           >
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-brand to-cyan-400 flex items-center justify-center text-white font-medium text-sm shadow-sm">
-              {initial}
-            </div>
+            {initial}
           </button>
-          
+
           {isProfileOpen && (
-            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 animate-in fade-in zoom-in-95">
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50">
               <div className="px-4 py-3 border-b border-slate-100 mb-2">
                 <p className="text-sm font-bold text-ink truncate">{displayName}</p>
                 <p className="text-xs text-slate-500 truncate">{email}</p>
@@ -150,7 +164,6 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
                   {roleLabels[role]}
                 </span>
               </div>
-              
               <form action={logoutAction}>
                 <button type="submit" className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition">
                   <LogOut size={16} /> Keluar
@@ -161,43 +174,79 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
         </div>
       </div>
 
-      {/* Mobile Menu Drawer */}
-      {isMobileMenuOpen && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[200] flex sm:hidden">
-          <div 
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" 
-            onClick={() => setIsMobileMenuOpen(false)} 
+      {/* Mobile Menu Drawer — rendered via portal to avoid z-index issues */}
+      {mounted && isMobileMenuOpen && createPortal(
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex" }}
+          role="dialog"
+          aria-modal="true"
+        >
+          {/* Backdrop */}
+          <div
+            style={{ position: "fixed", inset: 0, backgroundColor: "rgba(15,23,42,0.45)" }}
+            onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="relative flex w-4/5 max-w-[280px] flex-col bg-white shadow-2xl animate-in slide-in-from-left h-full">
-            <div className="flex items-center justify-between border-b border-slate-100 p-5">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white font-bold">B</div>
-                <span className="font-bold text-xl tracking-tight text-ink">BimbelPro</span>
+
+          {/* Drawer Panel */}
+          <div
+            style={{
+              position: "relative",
+              display: "flex",
+              flexDirection: "column",
+              width: "80%",
+              maxWidth: 280,
+              height: "100%",
+              backgroundColor: "#ffffff",
+              boxShadow: "4px 0 24px rgba(0,0,0,0.12)",
+            }}
+          >
+            {/* Drawer Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px", borderBottom: "1px solid #f1f5f9" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold" }}>B</div>
+                <span style={{ fontWeight: 700, fontSize: 20, color: "#16202A" }}>BimbelPro</span>
               </div>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 transition">
-                <X size={20} />
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{ touchAction: "manipulation", padding: 8, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer" }}
+                aria-label="Tutup menu"
+              >
+                <X size={22} color="#94a3b8" />
               </button>
             </div>
-            <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1 custom-scrollbar">
+
+            {/* Nav Links */}
+            <nav style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
               {navigation.map((item) => (
                 <Link
                   key={item.label}
                   href={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                    item.label === title 
-                      ? "bg-brand/10 text-brand"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-brand"
-                  }`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "12px 16px",
+                    borderRadius: 12,
+                    marginBottom: 4,
+                    textDecoration: "none",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: item.label === title ? "#6366f1" : "#475569",
+                    backgroundColor: item.label === title ? "#eef2ff" : "transparent",
+                  }}
                 >
                   {item.label}
                 </Link>
               ))}
-              
-              <div className="mt-8 border-t border-slate-100 pt-4">
+
+              <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
                 <form action={logoutAction}>
-                  <button type="submit" className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition">
-                    <LogOut size={18} className="text-slate-400" />
+                  <button
+                    type="submit"
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 12, border: "none", background: "transparent", cursor: "pointer", fontSize: 14, fontWeight: 500, color: "#64748b" }}
+                  >
+                    <LogOut size={18} color="#94a3b8" />
                     Keluar
                   </button>
                 </form>
