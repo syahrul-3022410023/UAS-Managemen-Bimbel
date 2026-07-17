@@ -1,0 +1,5 @@
+import { AppShell } from "@/components/app/app-shell";
+import { MasterDataManager } from "@/components/app/master-data-manager";
+import { requireRole } from "@/lib/auth/session";
+import { getParentWorkspace } from "../master-data/page-data";
+export default async function ParentsPage() { const user = await requireRole(["admin"]); const { rows } = await getParentWorkspace(); return <AppShell role={user.role} email={user.email} name={user.name} title="Data Orang Tua" activeNav="Orang Tua"><MasterDataManager entity="parents" singular="Orang Tua" title="Manajemen Orang Tua" description="Kelola data wali dan buat akun login mereka." rows={rows} fields={[{ key: "full_name", label: "Nama lengkap" }, { key: "phone", label: "Nomor telepon" }, { key: "account_name", label: "Akun login", table: true, form: false }, { key: "account_email", label: "Email akun", type: "email", table: false }, { key: "account_password", label: "Password akun", type: "password", table: false }, { key: "address", label: "Alamat", type: "textarea", table: false }]} /></AppShell>; }

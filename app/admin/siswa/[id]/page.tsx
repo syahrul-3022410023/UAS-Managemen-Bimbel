@@ -1,0 +1,15 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft, CalendarDays, GraduationCap, School, UserRound } from "lucide-react";
+import { AppShell } from "@/components/app/app-shell";
+import { requireRole } from "@/lib/auth/session";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const user = await requireRole(["admin"]); const { id } = await params; const supabase = await createSupabaseServerClient();
+  const { data: student } = await supabase.from("students").select("*").eq("id", id).maybeSingle();
+  if (!student) notFound();
+  const [{ data: parent }, { data: packageItem }] = await Promise.all([student.parent_id ? supabase.from("parents").select("full_name, phone").eq("id", student.parent_id).maybeSingle() : Promise.resolve({ data: null }), student.package_id ? supabase.from("packages").select("name, duration_months, sessions_per_month, price").eq("id", student.package_id).maybeSingle() : Promise.resolve({ data: null })]);
+  const items = [{ icon: GraduationCap, label: "NIS", value: student.student_number }, { icon: School, label: "Sekolah & kelas", value: [student.school_name, student.grade].filter(Boolean).join(" • ") || "—" }, { icon: CalendarDays, label: "Tanggal lahir", value: student.birth_date ?? "—" }, { icon: UserRound, label: "Orang tua", value: parent ? `${parent.full_name} · ${parent.phone}` : "—" }];
+  return <AppShell role={user.role} email={user.email} name={user.name} title="Detail Siswa" activeNav="Siswa"><Link href="/admin/siswa" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-brand"><ArrowLeft size={16}/>Kembali ke data siswa</Link><section className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-apple-soft"><div className="border-b border-slate-100 bg-gradient-to-r from-brand/10 to-cyan-50 px-6 py-7"><p className="text-sm font-semibold text-brand">Profil Siswa</p><h1 className="mt-1 text-3xl font-bold text-ink">{student.full_name}</h1><p className="mt-2 text-sm text-slate-500">{student.address || "Alamat belum ditambahkan"}</p></div><div className="grid gap-5 p-6 md:grid-cols-2">{items.map(item => { const Icon = item.icon; return <div key={item.label} className="flex gap-3 rounded-2xl bg-slate-50 p-4"><Icon size={19} className="mt-0.5 text-brand"/><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{item.label}</p><p className="mt-1 text-sm font-medium text-ink">{item.value}</p></div></div>})}</div>{packageItem && <div className="mx-6 mb-6 rounded-2xl border border-brand/15 bg-brand/5 p-5"><p className="text-xs font-semibold uppercase tracking-wide text-brand">Paket aktif</p><p className="mt-1 text-lg font-bold text-ink">{packageItem.name}</p><p className="mt-1 text-sm text-slate-600">{packageItem.duration_months} bulan · {packageItem.sessions_per_month} sesi/bulan · Rp {new Intl.NumberFormat("id-ID").format(Number(packageItem.price))}</p></div>}</section></AppShell>;
+}

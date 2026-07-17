@@ -1,0 +1,5 @@
+import { AppShell } from "@/components/app/app-shell";
+import { MasterDataManager } from "@/components/app/master-data-manager";
+import { requireRole } from "@/lib/auth/session";
+import { getMentorWorkspace } from "../master-data/page-data";
+export default async function MentorsPage() { const user = await requireRole(["admin"]); const { rows } = await getMentorWorkspace(); return <AppShell role={user.role} email={user.email} name={user.name} title="Data Mentor" activeNav="Mentor"><MasterDataManager entity="mentors" singular="Mentor" title="Manajemen Mentor" description="Kelola data pengajar dan buat akun login mereka." rows={rows} fields={[{ key: "full_name", label: "Nama lengkap" }, { key: "phone", label: "Nomor telepon" }, { key: "specialization", label: "Spesialisasi" }, { key: "account_name", label: "Akun login", table: true, form: false }, { key: "account_email", label: "Email akun", type: "email", table: false }, { key: "account_password", label: "Password akun", type: "password", table: false }, { key: "address", label: "Alamat", type: "textarea", table: false }]} /></AppShell>; }
