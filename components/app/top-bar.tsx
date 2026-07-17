@@ -61,10 +61,15 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
     : [];
 
   return (
-    <header className="sticky top-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-slate-200/50 px-4 sm:px-6 py-4 flex items-center justify-between">
+    <header className="sticky top-0 z-40 bg-surface/80 backdrop-blur-xl border-b border-slate-200/50 px-4 sm:px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-3 sm:hidden">
-        <button onClick={() => setIsMobileMenuOpen(true)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand transition">
-          <Menu size={22} />
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(true)}
+          style={{ touchAction: "manipulation" }}
+          className="relative z-50 flex items-center justify-center rounded-xl p-3 min-w-[44px] min-h-[44px] text-slate-500 hover:bg-slate-100 hover:text-brand active:bg-slate-200 transition"
+        >
+          <Menu size={24} />
         </button>
         <p className="text-base font-semibold text-ink">{title}</p>
       </div>
@@ -158,7 +163,7 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
 
       {/* Mobile Menu Drawer */}
       {isMobileMenuOpen && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[100] flex sm:hidden">
+        <div className="fixed inset-0 z-[200] flex sm:hidden">
           <div 
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" 
             onClick={() => setIsMobileMenuOpen(false)} 
