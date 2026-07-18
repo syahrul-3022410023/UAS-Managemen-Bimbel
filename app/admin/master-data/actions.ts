@@ -8,6 +8,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sendWhatsAppLoginMessage } from "@/lib/whatsapp";
 
 export type MasterEntity = "students" | "mentors" | "parents" | "packages" | "subjects";
+type ActionResult = {
+  success?: boolean;
+  error?: string;
+  warning?: string;
+};
 
 const optionalUuid = z.union([z.string().uuid(), z.literal("")]).optional();
 const accountFields = {
@@ -44,7 +49,7 @@ const adminAuthError = (message?: string) => {
   return message ?? "Akun login gagal dibuat.";
 };
 
-export async function saveMasterData(entity: MasterEntity, id: string | null, raw: Record<string, unknown>) {
+export async function saveMasterData(entity: MasterEntity, id: string | null, raw: Record<string, unknown>): Promise<ActionResult> {
   await requireRole(["admin"]);
   const result = schemas[entity].safeParse(raw);
   if (!result.success) return { error: result.error.issues[0]?.message ?? "Mohon lengkapi data dengan format yang benar." };
@@ -109,7 +114,7 @@ export async function saveMasterData(entity: MasterEntity, id: string | null, ra
   return { success: true };
 }
 
-export async function deleteMasterData(entity: MasterEntity, id: string) {
+export async function deleteMasterData(entity: MasterEntity, id: string): Promise<ActionResult> {
   await requireRole(["admin"]);
   const supabase = await createSupabaseServerClient();
   let profileId: string | null = null;
