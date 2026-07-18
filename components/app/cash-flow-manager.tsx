@@ -59,8 +59,8 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
         {message && <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{message}</div>}
 
         <div className="grid gap-4 md:grid-cols-3">
-          <CashCard label="Kas Masuk" value={formatRp(totalIncome)} tone="income" />
-          <CashCard label="Kas Keluar" value={formatRp(totalExpense)} tone="expense" />
+          <CashCard label="Masuk Manual" value={formatRp(totalIncome)} tone="income" />
+          <CashCard label="Keluar Manual" value={formatRp(totalExpense)} tone="expense" />
           <CashCard label="Saldo Manual" value={formatRp(totalIncome - totalExpense)} tone="balance" />
         </div>
 
@@ -173,14 +173,16 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
 }
 
 function CashCard({ label, value, tone }: { label: string; value: string; tone: "income" | "expense" | "balance" }) {
-  const styles = tone === "income" ? "bg-emerald-50 text-emerald-600" : tone === "expense" ? "bg-red-50 text-red-600" : "bg-[#EEF0FF] text-brand";
+  const styles = tone === "income" ? "bg-blue-50 text-brand" : tone === "expense" ? "bg-sky-50 text-sky-600" : "bg-cyan-50 text-cyan-600";
+  const detail = tone === "balance" ? "Masuk manual - keluar manual" : "Transaksi arus kas manual";
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-5">
-      <span className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${styles}`}>
-        {tone === "expense" ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
+    <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4">
+      <span className={`mb-5 flex h-8 w-8 items-center justify-center rounded-xl ${styles}`}>
+        {tone === "expense" ? <ArrowUpRight size={15} strokeWidth={2.2} /> : <ArrowDownLeft size={15} strokeWidth={2.2} />}
       </span>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-1 text-xl font-bold text-ink">{value}</p>
+      <p className="text-sm font-semibold text-ink">{label}</p>
+      <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{value}</p>
+      <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">{detail}</p>
     </div>
   );
 }

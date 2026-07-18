@@ -13,7 +13,7 @@ export default async function PackagesPage() {
         entity="packages"
         singular="Paket Bimbel"
         title="Paket Bimbel"
-        description="Atur paket bimbel, mapel, level, harga bulanan, dan tarif gaji mentor per sesi. Jadwal hari/jam tetap dibuat di menu Jadwal."
+        description=""
         rows={rows}
         fields={[
           { key: "name", label: "Nama Paket Bimbel" },

@@ -25,6 +25,7 @@ export function MasterDataManager({ entity, singular, title, description, fields
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<MasterRecord | null | undefined>();
   const [message, setMessage] = useState<string>();
+  const [notice, setNotice] = useState<string>();
   const [isPending, startTransition] = useTransition();
   const tableFields = fields.filter(field => field.table !== false);
   const formFields = fields.filter(field => field.form !== false);
@@ -48,21 +49,30 @@ export function MasterDataManager({ entity, singular, title, description, fields
 
   const submit = (form: HTMLFormElement) => {
     const raw = Object.fromEntries(new FormData(form));
+    setNotice(undefined);
     startTransition(async () => {
       const result = await saveMasterData(entity, editing?.id ?? null, raw);
-      if (result.error) setMessage(result.error); else close();
+      if (result.error) {
+        setMessage(result.error);
+      } else {
+        close();
+        if (result.warning) setNotice(result.warning);
+      }
     });
   };
   const remove = (id: string) => {
     if (!window.confirm(`Hapus data ${singular.toLowerCase()} ini?`)) return;
+    setNotice(undefined);
     startTransition(async () => {
       const result = await deleteMasterData(entity, id);
       if (result.error) setMessage(result.error);
+      else if (result.warning) setNotice(result.warning);
     });
   };
 
   return <>
-    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="app-title-primary">{title}</h1><p className="mt-1 text-sm text-slate-500">{description}</p></div><button onClick={() => setEditing(null)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brandHover"><Plus size={17} />Tambah {singular}</button></div>
+    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="app-title-primary">{title}</h1>{description && <p className="mt-1 text-sm text-slate-500">{description}</p>}</div><button onClick={() => setEditing(null)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brandHover"><Plus size={17} />Tambah {singular}</button></div>
+    {notice && <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">{notice}</p>}
     <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-apple-soft">
       <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm font-semibold text-ink">{rows.length} data terdaftar</p>
@@ -91,8 +101,13 @@ export function MasterDataManager({ entity, singular, title, description, fields
                   ) : (
                     <div className="flex justify-between items-center text-sm py-0.5">
                       <span className="text-slate-500">{field.label}</span>
-                      <span className="text-slate-700 text-right font-medium max-w-[65%] truncate">
-                        {priceFields.has(field.key) && row[field.key] !== null ? `Rp ${display(row[field.key])}` : display(row[field.key])}
+                      <span className="text-slate-700 text-right font-medium max-w-[65%]">
+                        {field.key === "parent_contact" && row.parent_name ? (
+                          <span className="block">
+                            <span className="block truncate">{display(row[field.key])}</span>
+                            <span className="mt-0.5 block truncate text-xs font-semibold text-slate-400">{display(row.parent_name)}</span>
+                          </span>
+                        ) : priceFields.has(field.key) && row[field.key] !== null ? `Rp ${display(row[field.key])}` : display(row[field.key])}
                       </span>
                     </div>
                   )}
@@ -137,6 +152,11 @@ export function MasterDataManager({ entity, singular, title, description, fields
                       <span className="block">
                         <span className="block font-semibold text-ink">{display(row[field.key])}</span>
                         <span className="mt-0.5 block text-xs font-semibold text-slate-400">{display(row.student_number)}</span>
+                      </span>
+                    ) : field.key === "parent_contact" && row.parent_name ? (
+                      <span className="block">
+                        <span className="block font-semibold text-ink">{display(row[field.key])}</span>
+                        <span className="mt-0.5 block text-xs font-semibold text-slate-400">{display(row.parent_name)}</span>
                       </span>
                     ) : priceFields.has(field.key) && row[field.key] !== null ? `Rp ${display(row[field.key])}` : display(row[field.key])}
                   </td>

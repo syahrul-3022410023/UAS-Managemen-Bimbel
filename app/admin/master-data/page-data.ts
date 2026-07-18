@@ -86,6 +86,7 @@ export async function getStudentRows() {
     ...student,
     parent_name: parentNames.get(student.parent_id) ?? null,
     parent_phone: student.parent_phone ?? parentPhones.get(student.parent_id) ?? null,
+    parent_contact: student.parent_phone ?? parentPhones.get(student.parent_id) ?? null,
     package_name: packageNames.get(student.package_id) ?? null
   }));
 }

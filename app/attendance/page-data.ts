@@ -33,7 +33,6 @@ export type AttendanceRecapRow = {
   count_late: number;
   count_excused: number;
   count_absent: number;
-  students: AttendanceStudent[];
 };
 
 // ─── Admin: recap all sessions ────────────────────────────────────────────────
@@ -46,7 +45,6 @@ export async function getAdminAttendanceRecap(): Promise<AttendanceRecapRow[]> {
     { data: classes },
     { data: mentors },
     { data: enrollments },
-    { data: students },
     { data: studentAttendance },
     { data: mentorAttendance },
   ] = await Promise.all([
@@ -54,7 +52,6 @@ export async function getAdminAttendanceRecap(): Promise<AttendanceRecapRow[]> {
     supabase.from("classes").select("id, name"),
     supabase.from("mentors").select("id, full_name"),
     supabase.from("student_classes").select("class_id, student_id"),
-    supabase.from("students").select("id, full_name"),
     supabase.from("student_attendance").select("schedule_id, student_id, status, notes"),
     supabase.from("mentor_attendance").select("schedule_id, mentor_id, status"),
   ]);
@@ -63,23 +60,35 @@ export async function getAdminAttendanceRecap(): Promise<AttendanceRecapRow[]> {
 
   const classNames = new Map((classes ?? []).map((x) => [x.id, x.name]));
   const mentorNames = new Map((mentors ?? []).map((x) => [x.id, x.full_name]));
-  const studentNames = new Map((students ?? []).map((x) => [x.id, x.full_name]));
+  const attendanceRows = studentAttendance ?? [];
+  const mentorAttendanceRows = mentorAttendance ?? [];
+  const enrollmentsByClass = new Map<string, string[]>();
+  const attendanceBySchedule = new Map<string, typeof attendanceRows>();
+  const mentorAttendanceBySchedule = new Map<string, (typeof mentorAttendanceRows)[number]>();
+
+  for (const enrollment of enrollments ?? []) {
+    const current = enrollmentsByClass.get(enrollment.class_id) ?? [];
+    current.push(enrollment.student_id);
+    enrollmentsByClass.set(enrollment.class_id, current);
+  }
+
+  for (const attendance of attendanceRows) {
+    const current = attendanceBySchedule.get(attendance.schedule_id) ?? [];
+    current.push(attendance);
+    attendanceBySchedule.set(attendance.schedule_id, current);
+  }
+
+  for (const attendance of mentorAttendanceRows) {
+    mentorAttendanceBySchedule.set(`${attendance.schedule_id}:${attendance.mentor_id}`, attendance);
+  }
 
   return (schedules ?? []).map((schedule) => {
-    const studentsInClass = (enrollments ?? [])
-      .filter((e) => e.class_id === schedule.class_id)
-      .map((e) => e.student_id);
-
-    const records = (studentAttendance ?? []).filter(
-      (a) => a.schedule_id === schedule.id
-    );
-
+    const studentsInClass = enrollmentsByClass.get(schedule.class_id) ?? [];
+    const records = attendanceBySchedule.get(schedule.id) ?? [];
     const count = (status: string) =>
       records.filter((r) => r.status === status).length;
 
-    const mentorRecord = (mentorAttendance ?? []).find(
-      (m) => m.schedule_id === schedule.id && m.mentor_id === schedule.mentor_id
-    );
+    const mentorRecord = mentorAttendanceBySchedule.get(`${schedule.id}:${schedule.mentor_id}`);
 
     return {
       schedule_id: schedule.id,
@@ -92,15 +101,6 @@ export async function getAdminAttendanceRecap(): Promise<AttendanceRecapRow[]> {
       count_late: count("late"),
       count_excused: count("excused"),
       count_absent: count("absent"),
-      students: studentsInClass.map((studentId) => {
-        const saved = records.find((a) => a.student_id === studentId);
-        return {
-          id: studentId,
-          full_name: studentNames.get(studentId) ?? "Siswa",
-          status: saved?.status ?? "unrecorded",
-          notes: saved?.notes ?? "",
-        };
-      }),
     };
   });
 }

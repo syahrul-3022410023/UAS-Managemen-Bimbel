@@ -69,8 +69,8 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
     const colors = [
       { bg: "#FFE4E6", border: "#E11D48", text: "#E11D48" }, // pink/red
       { bg: "#FEF3C7", border: "#D97706", text: "#D97706" }, // yellow/orange
-      { bg: "#F3E8FF", border: "#9333EA", text: "#9333EA" }, // purple
-      { bg: "#E0E7FF", border: "#4F46E5", text: "#4F46E5" }, // indigo
+      { bg: "#E0F2FE", border: "#0284C7", text: "#0369A1" },
+      { bg: "#DBEAFE", border: "#2563EB", text: "#1D4ED8" },
       { bg: "#D1FAE5", border: "#059669", text: "#059669" }, // emerald
     ];
     return colors[hash % colors.length];
@@ -452,7 +452,7 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
                               ? draft.weekdays.filter((value) => value !== day.value)
                               : [...draft.weekdays, day.value],
                           }))}
-                          className="h-4 w-4 accent-[#3947FF]"
+                          className="h-4 w-4 accent-[#2563EB]"
                         />
                         {day.label}
                       </label>

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { sendWhatsAppLoginMessage } from "@/lib/whatsapp";
 
 export type MasterEntity = "students" | "mentors" | "parents" | "packages" | "subjects";
 
@@ -35,6 +36,13 @@ const schemas = {
 const paths: Record<MasterEntity, string> = { students: "/admin/siswa", mentors: "/admin/mentor", parents: "/admin/orang-tua", packages: "/admin/paket", subjects: "/admin/mata-pelajaran" };
 const nullable = (value: unknown) => value === "" || value === undefined ? null : value;
 const accountEntities = new Set<MasterEntity>(["mentors", "parents"]);
+const adminAuthError = (message?: string) => {
+  const lowerMessage = message?.toLowerCase() ?? "";
+  if (lowerMessage.includes("invalid api key")) {
+    return "Secret key Supabase ditolak. Pastikan NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY berasal dari project Supabase yang sama, lalu restart server.";
+  }
+  return message ?? "Akun login gagal dibuat.";
+};
 
 export async function saveMasterData(entity: MasterEntity, id: string | null, raw: Record<string, unknown>) {
   await requireRole(["admin"]);
@@ -45,6 +53,8 @@ export async function saveMasterData(entity: MasterEntity, id: string | null, ra
   if (entity === "students" && !values.student_number) delete values.student_number;
   const email = typeof values.account_email === "string" ? values.account_email : null;
   const password = typeof values.account_password === "string" ? values.account_password : null;
+  const phone = typeof values.phone === "string" ? values.phone : null;
+  const fullName = typeof values.full_name === "string" ? values.full_name : "Pengguna";
   let profileId = typeof values.profile_id === "string" ? values.profile_id : null;
   delete values.account_email;
   delete values.account_password;
@@ -59,18 +69,21 @@ export async function saveMasterData(entity: MasterEntity, id: string | null, ra
       try {
         const admin = createSupabaseAdminClient();
         const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name: values.full_name, role } });
-        if (error || !data.user) return { error: error?.message ?? "Akun login gagal dibuat." };
+        if (error || !data.user) return { error: adminAuthError(error?.message) };
         createdUserId = data.user.id;
         profileId = data.user.id;
       } catch {
         return { error: "Akun otomatis memerlukan SUPABASE_SERVICE_ROLE_KEY di .env.local." };
       }
-    } else if (!id && !profileId) {
-      return { error: "Pilih akun yang ada atau isi email dan password untuk membuat akun baru." };
     } else if (profileId) {
-      const admin = createSupabaseAdminClient();
-      const { data: profile, error: profileError } = await admin.from("profiles").select("id").eq("id", profileId).eq("role", role).maybeSingle();
-      if (profileError || !profile) return { error: `Pilih akun login dengan role ${role} yang valid.` };
+      try {
+        const admin = createSupabaseAdminClient();
+        const { data: profile, error: profileError } = await admin.from("profiles").select("id").eq("id", profileId).eq("role", role).maybeSingle();
+        if (profileError) return { error: adminAuthError(profileError.message) };
+        if (profileError || !profile) return { error: `Pilih akun login dengan role ${role} yang valid.` };
+      } catch {
+        return { error: "Validasi akun login memerlukan SUPABASE_SERVICE_ROLE_KEY yang benar di .env.local." };
+      }
     }
     if (profileId) values.profile_id = profileId;
     else if (id) delete values.profile_id;
@@ -84,6 +97,14 @@ export async function saveMasterData(entity: MasterEntity, id: string | null, ra
     }
     return { error: error.code === "23505" ? "Data atau akun tersebut sudah digunakan." : error.message };
   }
+  if (createdUserId && email && password && phone) {
+    const roleLabel = entity === "mentors" ? "mentor" : "orang tua";
+    const whatsapp = await sendWhatsAppLoginMessage({ email, name: fullName, password, phone, roleLabel });
+    if (whatsapp.error) {
+      revalidatePath(paths[entity]);
+      return { success: true, warning: `Data tersimpan, tetapi WhatsApp gagal dikirim: ${whatsapp.error}` };
+    }
+  }
   revalidatePath(paths[entity]);
   return { success: true };
 }
@@ -91,8 +112,27 @@ export async function saveMasterData(entity: MasterEntity, id: string | null, ra
 export async function deleteMasterData(entity: MasterEntity, id: string) {
   await requireRole(["admin"]);
   const supabase = await createSupabaseServerClient();
+  let profileId: string | null = null;
+
+  if (accountEntities.has(entity)) {
+    const { data, error: lookupError } = await supabase
+      .from(entity)
+      .select("profile_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (lookupError) return { error: lookupError.message };
+    profileId = typeof data?.profile_id === "string" ? data.profile_id : null;
+  }
+
+  if (profileId) {
+    const { error: authError } = await createSupabaseAdminClient().auth.admin.deleteUser(profileId);
+    if (authError) return { error: `Akun autentikasi gagal dihapus: ${adminAuthError(authError.message)}` };
+  }
+
   const { error } = await supabase.from(entity).delete().eq("id", id);
   if (error) return { error: error.message };
+
   revalidatePath(paths[entity]);
   return { success: true };
 }

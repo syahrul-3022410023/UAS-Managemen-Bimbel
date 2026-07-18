@@ -171,7 +171,7 @@ export function AttendanceManager({ schedules }: { schedules: AttendanceSchedule
               <button
                 onClick={submit}
                 disabled={isPending || rows.length === 0}
-                className="ml-auto inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand/90 disabled:opacity-60 transition"
+                className="ml-auto inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brandHover disabled:opacity-60"
               >
                 <Save size={16} />
                 {isPending ? "Menyimpan..." : "Simpan Absensi"}

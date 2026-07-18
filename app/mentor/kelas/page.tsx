@@ -107,17 +107,23 @@ export default async function MentorKelasPage() {
         {/* Summary */}
         {mentor && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Total Kelas</p>
-              <p className="mt-1 text-3xl font-bold text-indigo-600">{kelasList.length}</p>
-              <p className="mt-0.5 text-xs text-slate-400">Kelas yang diampu</p>
+            <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-sm">
+              <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-brand">
+                <BookOpen size={15} strokeWidth={2.2} />
+              </div>
+              <p className="text-sm font-semibold text-ink">Kelas</p>
+              <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{kelasList.length}</p>
+              <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Kelas yang diampu</p>
             </div>
-            <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Total Siswa</p>
-              <p className="mt-1 text-3xl font-bold text-emerald-600">
+            <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-sm">
+              <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+                <Users size={15} strokeWidth={2.2} />
+              </div>
+              <p className="text-sm font-semibold text-ink">Siswa</p>
+              <p className="mt-5 text-[28px] font-semibold leading-none text-ink">
                 {kelasList.reduce((s, k) => s + k.totalSiswa, 0)}
               </p>
-              <p className="mt-0.5 text-xs text-slate-400">Dari seluruh kelas</p>
+              <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Dari seluruh kelas</p>
             </div>
           </div>
         )}
@@ -148,7 +154,7 @@ export default async function MentorKelasPage() {
               >
                 {/* Mata pelajaran badge */}
                 {kelas.subjects?.name && (
-                  <span className="inline-block mb-3 text-xs font-medium bg-indigo-50 text-indigo-600 rounded-full px-2.5 py-0.5">
+                  <span className="inline-block mb-3 text-xs font-medium bg-blue-50 text-brand rounded-full px-2.5 py-0.5">
                     {kelas.subjects.name}
                   </span>
                 )}

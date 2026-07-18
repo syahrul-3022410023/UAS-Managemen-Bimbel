@@ -60,17 +60,29 @@ export function ParentInvoiceView({ invoices }: { invoices: InvoiceRow[] }) {
 
       {/* Stats */}
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-apple-soft">
-          <p className="text-xs text-slate-500">Total Invoice</p>
-          <p className="mt-1 text-xl font-bold text-slate-700">{invoices.length}</p>
+        <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-apple-soft">
+          <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-brand">
+            <FileText size={15} strokeWidth={2.2} />
+          </div>
+          <p className="text-sm font-semibold text-ink">Invoice</p>
+          <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{invoices.length}</p>
+          <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Tagihan terdaftar</p>
         </div>
-        <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-apple-soft">
-          <p className="text-xs text-slate-500">Total Terbayar</p>
-          <p className="mt-1 text-xl font-bold text-emerald-600">{formatCurrency(stats.paid)}</p>
+        <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-apple-soft">
+          <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+            <CheckCircle2 size={15} strokeWidth={2.2} />
+          </div>
+          <p className="text-sm font-semibold text-ink">Terbayar</p>
+          <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{formatCurrency(stats.paid)}</p>
+          <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Pembayaran diterima</p>
         </div>
-        <div className="rounded-2xl border border-red-50 bg-red-50/50 p-4">
-          <p className="text-xs text-red-400">Sisa Tagihan</p>
-          <p className="mt-1 text-xl font-bold text-red-600">{formatCurrency(stats.unpaid)}</p>
+        <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4">
+          <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+            <AlertCircle size={15} strokeWidth={2.2} />
+          </div>
+          <p className="text-sm font-semibold text-ink">Sisa Tagihan</p>
+          <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{formatCurrency(stats.unpaid)}</p>
+          <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Belum dibayar</p>
         </div>
       </div>
 

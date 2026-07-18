@@ -63,18 +63,22 @@ export function PaymentHistory({ payments }: { payments: PaymentRecapRow[] }) {
 
       {/* Stats */}
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-apple-soft lg:col-span-2">
-          <p className="text-xs text-slate-500">Total Pendapatan</p>
-          <p className="mt-1 text-3xl font-bold text-emerald-600">{formatCurrency(totalRevenue)}</p>
-          <p className="mt-1 text-xs text-slate-400">{payments.length} transaksi</p>
+        <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-apple-soft lg:col-span-2">
+          <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-brand">
+            <CreditCard size={15} strokeWidth={2.2} />
+          </div>
+          <p className="text-sm font-semibold text-ink">Pendapatan</p>
+          <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{formatCurrency(totalRevenue)}</p>
+          <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">{payments.length} transaksi diterima</p>
         </div>
         {Object.entries(revenueByMethod).map(([method, amount]) => (
-          <div key={method} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-apple-soft">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
+          <div key={method} className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-apple-soft">
+            <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
               {methodIcons[method]}
-              {methodLabels[method] ?? method}
             </div>
-            <p className="text-lg font-bold text-slate-700">{formatCurrency(amount)}</p>
+            <p className="text-sm font-semibold text-ink">{methodLabels[method] ?? method}</p>
+            <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{formatCurrency(amount)}</p>
+            <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Metode pembayaran</p>
           </div>
         ))}
       </div>

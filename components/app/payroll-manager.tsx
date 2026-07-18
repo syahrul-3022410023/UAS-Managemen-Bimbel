@@ -46,9 +46,9 @@ export function PayrollManager({ rows }: { rows: PayrollRow[] }) {
       {message && <div className="rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm font-semibold text-slate-600">{message}</div>}
 
       <div className="grid gap-4 md:grid-cols-3">
-        <MiniFinanceCard label="Payroll Belum Dibayar" value={formatRp(totalUnpaid)} icon={<Banknote size={18} />} />
-        <MiniFinanceCard label="Payroll Terbayar" value={formatRp(totalPaid)} icon={<FileText size={18} />} />
-        <MiniFinanceCard label="Total Slip" value={String(rows.length)} icon={<Printer size={18} />} />
+        <MiniFinanceCard label="Belum Dibayar" value={formatRp(totalUnpaid)} detail="Payroll menunggu pelunasan" icon={<Banknote size={15} strokeWidth={2.2} />} />
+        <MiniFinanceCard label="Terbayar" value={formatRp(totalPaid)} detail="Payroll berstatus lunas" icon={<FileText size={15} strokeWidth={2.2} />} />
+        <MiniFinanceCard label="Total Slip" value={String(rows.length)} detail="Slip payroll tersimpan" icon={<Printer size={15} strokeWidth={2.2} />} />
       </div>
 
       <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white">
@@ -156,12 +156,13 @@ function MobileMetric({ label, value, strong }: { label: string; value: string; 
   );
 }
 
-function MiniFinanceCard({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+function MiniFinanceCard({ label, value, detail, icon }: { label: string; value: string; detail: string; icon: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-5">
-      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#EEF0FF] text-brand">{icon}</div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-1 text-xl font-bold text-ink">{value}</p>
+    <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4">
+      <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-brand">{icon}</div>
+      <p className="text-sm font-semibold text-ink">{label}</p>
+      <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{value}</p>
+      <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">{detail}</p>
     </div>
   );
 }

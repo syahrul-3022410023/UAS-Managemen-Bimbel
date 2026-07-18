@@ -7,7 +7,6 @@ import {
   AlertCircle,
   ArrowUpRight,
   CalendarDays,
-  CreditCard,
   Layers,
   ReceiptText,
   TrendingUp,
@@ -29,9 +28,9 @@ export default async function AdminDashboardPage() {
     }).format(amount);
 
   const operations = [
-    { label: "Siswa", value: metrics.students, detail: "Data siswa aktif", color: "from-[#3947FF] to-[#7771FF]" },
+    { label: "Siswa", value: metrics.students, detail: "Data siswa aktif", color: "from-[#2563EB] to-[#06B6D4]" },
     { label: "Mentor", value: metrics.mentors, detail: "Pengajar terdaftar", color: "from-[#10B981] to-[#34D399]" },
-    { label: "Kelas", value: metrics.classes, detail: "Kelas berjalan", color: "from-[#8B5CF6] to-[#A78BFA]" },
+    { label: "Kelas", value: metrics.classes, detail: "Kelas berjalan", color: "from-[#0284C7] to-[#38BDF8]" },
     { label: "Absensi", value: metrics.attendance, detail: "Record presensi", color: "from-[#0EA5E9] to-[#38BDF8]" },
   ];
   const maxOperation = Math.max(...operations.map((item) => item.value), 1);
@@ -45,10 +44,10 @@ export default async function AdminDashboardPage() {
       tone: "bg-[#EEF0FF] text-brand",
     },
     {
-      title: "Rekap Pembayaran",
-      detail: "Pantau transaksi pembayaran masuk",
-      href: "/admin/pembayaran",
-      icon: CreditCard,
+      title: "Laporan Keuangan",
+      detail: "Pantau pembayaran masuk dan arus kas",
+      href: "/admin/laporan",
+      icon: TrendingUp,
       tone: "bg-emerald-50 text-emerald-600",
     },
     {
@@ -63,7 +62,7 @@ export default async function AdminDashboardPage() {
       detail: "Susun kelas, siswa, dan mentor",
       href: "/admin/kelas",
       icon: Layers,
-      tone: "bg-violet-50 text-violet-600",
+      tone: "bg-sky-50 text-sky-600",
     },
   ];
 
@@ -107,15 +106,31 @@ export default async function AdminDashboardPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="Total Kas Masuk" value={formatCurrency(metrics.totalCashIn)} detail="SPP dan pemasukan kas" />
-        <SummaryCard label="Total Kas Keluar" value={formatCurrency(metrics.totalCashOut)} detail="Payroll dan pengeluaran" />
-        <SummaryCard label="Saldo Kas" value={formatCurrency(metrics.cashBalance)} detail="Kas masuk dikurangi keluar" />
-        <SummaryCard label="Payroll Bulan Ini" value={formatCurrency(metrics.payrollThisMonth)} detail="Estimasi gaji mentor" />
+        <SummaryCard
+          label="Penerimaan"
+          value={formatCurrency(metrics.totalCashIn)}
+          detail={`SPP ${formatCurrency(metrics.paymentIncome)} + kas manual ${formatCurrency(metrics.cashIncome)}`}
+        />
+        <SummaryCard
+          label="Pengeluaran"
+          value={formatCurrency(metrics.totalCashOut)}
+          detail={`Payroll ${formatCurrency(metrics.paidPayrollExpense)} + kas manual ${formatCurrency(metrics.cashExpense)}`}
+        />
+        <SummaryCard
+          label="Saldo Bersih"
+          value={formatCurrency(metrics.cashBalance)}
+          detail="Penerimaan - pengeluaran"
+        />
+        <SummaryCard
+          label="Payroll Bulan Ini"
+          value={formatCurrency(metrics.payrollThisMonth)}
+          detail="Total payroll periode ini"
+        />
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.8fr)]">
-        <section className="rounded-2xl border border-slate-100 bg-white p-5">
-          <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mt-5 grid items-stretch gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.85fr)]">
+        <section className="h-full rounded-2xl border border-slate-100 bg-white p-5">
+          <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <h2 className="text-base font-bold text-ink">Aktivitas Operasional</h2>
               <p className="mt-1 text-xs text-slate-500">Perbandingan data inti bimbel.</p>
@@ -125,22 +140,22 @@ export default async function AdminDashboardPage() {
             </span>
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
-            <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-gradient-to-b from-slate-50/70 to-white p-5">
-              <div className="pointer-events-none absolute inset-x-5 top-10 bottom-16 flex flex-col justify-between">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px]">
+            <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-gradient-to-b from-slate-50/70 to-white p-4">
+              <div className="pointer-events-none absolute inset-x-5 top-9 bottom-14 flex flex-col justify-between">
                 {[0, 1, 2, 3].map((line) => (
                   <span key={line} className="border-t border-dashed border-slate-200/80" />
                 ))}
               </div>
-              <div className="relative flex h-64 items-end justify-around gap-4 pb-8 pt-8">
+              <div className="relative flex h-56 items-end justify-around gap-3 pb-7 pt-7">
                 {operations.map((item) => {
                   const height = Math.max(14, Math.round((item.value / maxOperation) * 100));
                   return (
                     <div key={item.label} className="group flex min-w-0 flex-1 flex-col items-center">
-                      <div className="mb-3 rounded-full border border-slate-100 bg-white px-2.5 py-1 text-xs font-bold text-ink opacity-0 transition group-hover:opacity-100">
+                      <div className="mb-2 rounded-full border border-slate-100 bg-white px-2.5 py-1 text-xs font-bold text-ink opacity-0 transition group-hover:opacity-100">
                         {item.value}
                       </div>
-                      <div className="flex h-40 w-full max-w-[52px] items-end rounded-[18px] border border-slate-100 bg-white p-1.5">
+                      <div className="flex h-36 w-full max-w-[50px] items-end rounded-[18px] border border-slate-100 bg-white p-1.5">
                         <div
                           className={`w-full rounded-[14px] bg-gradient-to-t ${item.color} transition-all duration-500 group-hover:brightness-105`}
                           style={{ height: `${height}%` }}
@@ -153,11 +168,11 @@ export default async function AdminDashboardPage() {
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="grid content-start gap-2">
               {operations.map((item) => {
                 const width = Math.max(8, Math.round((item.value / maxOperation) * 100));
                 return (
-                  <div key={item.label} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
+                  <div key={item.label} className="rounded-2xl border border-slate-100 bg-slate-50/70 px-3 py-2.5">
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-bold text-ink">{item.label}</p>
@@ -165,7 +180,7 @@ export default async function AdminDashboardPage() {
                       </div>
                       <span className="text-sm font-bold text-ink">{item.value}</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-white">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-white">
                       <div className={`h-full rounded-full bg-gradient-to-r ${item.color}`} style={{ width: `${width}%` }} />
                     </div>
                   </div>
@@ -177,11 +192,11 @@ export default async function AdminDashboardPage() {
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <MiniStat label="Invoice perlu tindakan" value={String(metrics.unpaidInvoices)} />
             <MiniStat label="Pendapatan bulan ini" value={formatCurrency(metrics.revenueThisMonth)} />
-            <MiniStat label="Saldo kas berjalan" value={formatCurrency(metrics.cashBalance)} />
+            <MiniStat label="Saldo operasional" value={formatCurrency(metrics.cashBalance)} />
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-100 bg-white p-5">
+        <section className="flex h-full flex-col rounded-2xl border border-slate-100 bg-white p-5">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-slate-400">Pendapatan Bulan Ini</p>
@@ -193,19 +208,19 @@ export default async function AdminDashboardPage() {
             </div>
           </div>
 
-          <svg className="mt-7 h-36 w-full overflow-visible rounded-3xl bg-gradient-to-b from-slate-50/80 to-white p-3" viewBox="0 0 280 130" fill="none" aria-hidden="true">
-            <path d="M10 96 C36 72 52 80 72 58 C96 31 118 46 142 40 C170 32 186 16 214 34 C240 51 254 30 270 22" stroke="#3947FF" strokeWidth="4" strokeLinecap="round" />
+          <svg className="mt-7 h-40 w-full overflow-visible rounded-3xl bg-gradient-to-b from-slate-50/80 to-white p-3" viewBox="0 0 280 130" fill="none" aria-hidden="true">
+            <path d="M10 96 C36 72 52 80 72 58 C96 31 118 46 142 40 C170 32 186 16 214 34 C240 51 254 30 270 22" stroke="#2563EB" strokeWidth="4" strokeLinecap="round" />
             <path d="M10 96 C36 72 52 80 72 58 C96 31 118 46 142 40 C170 32 186 16 214 34 C240 51 254 30 270 22 V120 H10 Z" fill="url(#revenueFill)" />
-            <circle cx="270" cy="22" r="5" fill="#3947FF" stroke="white" strokeWidth="4" />
+            <circle cx="270" cy="22" r="5" fill="#2563EB" stroke="white" strokeWidth="4" />
             <defs>
               <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="110">
-                <stop stopColor="#3947FF" stopOpacity="0.18" />
-                <stop offset="1" stopColor="#3947FF" stopOpacity="0" />
+                <stop stopColor="#2563EB" stopOpacity="0.18" />
+                <stop offset="1" stopColor="#2563EB" stopOpacity="0" />
               </linearGradient>
             </defs>
           </svg>
 
-          <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+          <div className="mt-auto rounded-2xl bg-slate-50 p-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-ink">Status Invoice</p>
               <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${metrics.unpaidInvoices > 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"}`}>

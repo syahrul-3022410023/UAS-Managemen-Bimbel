@@ -209,7 +209,7 @@ function GenerateForm({
           <button
             type="submit"
             disabled={isPending}
-            className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand/90 disabled:opacity-60"
+            className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brandHover disabled:opacity-60"
           >
             {isPending ? "Membuat..." : "Generate Invoice SPP"}
           </button>
@@ -264,7 +264,7 @@ export function InvoiceManager({ invoices, students }: Props) {
         </div>
         <button
           onClick={() => setShowGenerate(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand/90"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brandHover"
         >
           <Plus size={17} />
           Generate Invoice SPP
@@ -274,15 +274,23 @@ export function InvoiceManager({ invoices, students }: Props) {
       {/* Stats */}
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Total Invoice", value: stats.total, color: "text-slate-700" },
-          { label: "Belum Dibayar", value: stats.unpaid, color: "text-red-600" },
-          { label: "Lunas", value: stats.paid, color: "text-emerald-600" },
-        ].map((s) => (
-          <div key={s.label} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-apple-soft">
-            <p className="text-xs text-slate-500">{s.label}</p>
-            <p className={`mt-1 text-2xl font-bold ${s.color}`}>{s.value}</p>
-          </div>
-        ))}
+          { label: "Invoice", value: String(stats.total), detail: "Tagihan terdaftar", icon: FileText },
+          { label: "Belum Dibayar", value: String(stats.unpaid), detail: "Invoice menunggu bayar", icon: AlertCircle },
+          { label: "Lunas", value: String(stats.paid), detail: "Invoice selesai", icon: CheckCircle2 },
+          { label: "Terbayar", value: formatCurrency(stats.revenue), detail: "Pembayaran lunas diterima", icon: CheckCircle2 },
+        ].map((s) => {
+          const Icon = s.icon;
+          return (
+            <div key={s.label} className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-apple-soft">
+              <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-brand">
+                <Icon size={15} strokeWidth={2.2} />
+              </div>
+              <p className="text-sm font-semibold text-ink">{s.label}</p>
+              <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{s.value}</p>
+              <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">{s.detail}</p>
+            </div>
+          );
+        })}
       </div>
 
       {/* Filter & Search */}

@@ -86,9 +86,10 @@ export function PayrollSlip({ payroll, details }: { payroll: PayrollRow; details
 
 function SlipStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-1 text-lg font-bold text-ink">{value}</p>
+    <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4">
+      <p className="text-sm font-semibold text-ink">{label}</p>
+      <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{value}</p>
+      <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Komponen payroll</p>
     </div>
   );
 }

@@ -85,9 +85,9 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
 
   return (
     // Removed backdrop-blur from sticky header — causes touch event blocking on Android
-    <header className="gsm-topbar sticky top-0 z-40 bg-white border-b border-slate-100 px-3 py-3 sm:px-6 sm:py-4 flex items-center justify-between">
+    <header className="gsm-topbar sticky top-0 z-40 bg-white px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between">
       {/* Mobile: Hamburger + Title */}
-      <div className="flex min-w-0 items-center gap-2 sm:hidden">
+      <div className="flex min-w-0 items-center gap-3 sm:hidden">
         <button
           type="button"
           onClick={() => setIsMobileMenuOpen(true)}
@@ -206,8 +206,8 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
             {/* Drawer Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px", borderBottom: "1px solid #f1f5f9" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "#3947FF", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold" }}>B</div>
-                <span style={{ fontWeight: 700, fontSize: 20, color: "#16202A" }}>BimbelPro</span>
+                <div style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold" }}>B</div>
+                <span style={{ fontWeight: 700, fontSize: 20, color: "#16202A" }}>Manajemen Bimbel</span>
               </div>
               <button
                 type="button"
@@ -235,7 +235,7 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
                     textDecoration: "none",
                     fontSize: 14,
                     fontWeight: 500,
-                    color: item.label === title ? "#3947FF" : "#475569",
+                    color: item.label === title ? "#2563EB" : "#475569",
                     backgroundColor: item.label === title ? "#EEF0FF" : "transparent",
                   }}
                 >

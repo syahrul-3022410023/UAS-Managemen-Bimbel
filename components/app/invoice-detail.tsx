@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft, CheckCircle2, AlertCircle,
-  Plus, Trash2, X, CreditCard, Banknote, QrCode, MoreHorizontal
+  Plus, Trash2, X, CreditCard, Banknote, QrCode, MoreHorizontal, Printer
 } from "lucide-react";
 import Link from "next/link";
 import { savePayment, updateInvoiceStatus, deletePayment } from "@/app/billing/actions";
@@ -182,7 +182,7 @@ function PaymentForm({
           <button
             type="submit"
             disabled={isPending || remaining <= 0}
-            className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand/90 disabled:opacity-60"
+            className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brandHover disabled:opacity-60"
           >
             {isPending ? "Menyimpan..." : "Simpan Pembayaran"}
           </button>
@@ -225,7 +225,7 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
       {/* Back */}
       <Link
         href="/admin/invoice"
-        className="mb-6 inline-flex items-center gap-2 text-sm text-slate-500 hover:text-brand transition"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-slate-500 transition hover:text-brand print:hidden"
       >
         <ArrowLeft size={16} />
         Kembali ke Daftar Invoice
@@ -233,16 +233,16 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
 
       {/* Error message */}
       {message && (
-        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700">
+        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700 print:hidden">
           {message}
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 print:block">
         {/* Left: Invoice Info */}
         <div className="lg:col-span-2 space-y-6">
           {/* Invoice Header Card */}
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-apple-soft">
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-apple-soft print:rounded-none print:border-slate-300">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="mb-3">
@@ -255,6 +255,8 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
                 </p>
               </div>
               <div className="text-right">
+                <p className="text-xs text-slate-400">Nomor Dokumen</p>
+                <p className="mb-3 text-sm font-bold text-slate-700">{invoice.invoice_number ?? "INV-DRAFT"}</p>
                 <p className="text-xs text-slate-400">Total Tagihan</p>
                 <p className="text-2xl font-bold text-slate-900">{formatCurrency(invoice.amount)}</p>
               </div>
@@ -302,13 +304,13 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
           </div>
 
           {/* Payment History */}
-          <div className="rounded-2xl border border-slate-100 bg-white shadow-apple-soft">
+          <div className="rounded-2xl border border-slate-100 bg-white shadow-apple-soft print:rounded-none print:border-slate-300">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <h2 className="font-semibold text-slate-900">Riwayat Pembayaran</h2>
               {invoice.status !== "paid" && (
                 <button
                   onClick={() => setShowPaymentForm(true)}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand/90 transition"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brandHover print:hidden"
                 >
                   <Plus size={14} /> Input Pembayaran
                 </button>
@@ -329,7 +331,7 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
                       <th className="px-5 py-3 text-left font-semibold">Metode</th>
                       <th className="px-5 py-3 text-left font-semibold">Referensi</th>
                       <th className="px-5 py-3 text-right font-semibold">Nominal</th>
-                      <th className="px-5 py-3 text-right font-semibold">Aksi</th>
+                      <th className="px-5 py-3 text-right font-semibold print:hidden">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -348,7 +350,7 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
                         <td className="px-5 py-3 text-right font-semibold text-emerald-600">
                           {formatCurrency(p.amount)}
                         </td>
-                        <td className="px-5 py-3 text-right">
+                        <td className="px-5 py-3 text-right print:hidden">
                           <button
                             onClick={() => handleDeletePayment(p.id)}
                             disabled={isPending}
@@ -368,7 +370,10 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
         </div>
 
         {/* Right: Actions */}
-        <div className="space-y-4">
+        <div className="space-y-4 print:hidden">
+          <button onClick={() => window.print()} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brandHover">
+            <Printer size={17} /> Cetak Invoice
+          </button>
           {/* Quick Action */}
           <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-apple-soft">
             <h3 className="mb-4 font-semibold text-slate-900">Ubah Status Invoice</h3>

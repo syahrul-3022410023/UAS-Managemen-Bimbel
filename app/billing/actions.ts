@@ -126,7 +126,7 @@ export async function savePayment(invoiceId: string, raw: Record<string, unknown
 
   revalidatePath(`/admin/invoice/${invoiceId}`);
   revalidatePath("/admin/invoice");
-  revalidatePath("/admin/pembayaran");
+  revalidatePath("/admin/laporan");
   return { success: true };
 }
 
@@ -148,6 +148,7 @@ export async function updateInvoiceStatus(
 
   revalidatePath(`/admin/invoice/${invoiceId}`);
   revalidatePath("/admin/invoice");
+  revalidatePath("/admin/laporan");
   return { success: true };
 }
 
@@ -181,6 +182,6 @@ export async function deletePayment(paymentId: string, invoiceId: string) {
 
   revalidatePath(`/admin/invoice/${invoiceId}`);
   revalidatePath("/admin/invoice");
-  revalidatePath("/admin/pembayaran");
+  revalidatePath("/admin/laporan");
   return { success: true };
 }

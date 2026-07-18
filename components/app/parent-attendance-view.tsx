@@ -69,19 +69,18 @@ export function ParentAttendanceView({
       {/* Summary Strip */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Total Sesi", value: total, color: "bg-brand", icon: Users },
-          { label: "Hadir", value: countOf("present"), color: "bg-emerald-500", icon: CheckCircle2 },
-          { label: "Izin / Terlambat", value: countOf("excused") + countOf("late"), color: "bg-amber-500", icon: Clock },
-          { label: "Tidak Hadir", value: countOf("absent"), color: "bg-red-500", icon: XCircle },
+          { label: "Sesi", value: total, color: "bg-brand", icon: Users },
+          { label: "Hadir", value: countOf("present"), color: "bg-sky-500", icon: CheckCircle2 },
+          { label: "Izin / Terlambat", value: countOf("excused") + countOf("late"), color: "bg-cyan-500", icon: Clock },
+          { label: "Tidak Hadir", value: countOf("absent"), color: "bg-blue-500", icon: XCircle },
         ].map(({ label, value, color, icon: Icon }) => (
-          <div key={label} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-4 shadow-apple-soft">
-            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color}`}>
-              <Icon size={18} className="text-white" />
+          <div key={label} className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-apple-soft">
+            <div className={`mb-5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${color}`}>
+              <Icon size={15} strokeWidth={2.2} className="text-white" />
             </div>
-            <div>
-              <p className="text-xs text-slate-500">{label}</p>
-              <p className="text-lg font-bold text-ink">{value}</p>
-            </div>
+            <p className="text-sm font-semibold text-ink">{label}</p>
+            <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{value}</p>
+            <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Berdasarkan filter aktif</p>
           </div>
         ))}
       </div>

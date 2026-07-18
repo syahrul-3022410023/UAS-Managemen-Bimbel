@@ -2,7 +2,7 @@ import { AppShell } from "@/components/app/app-shell";
 import { SummaryCard } from "@/components/app/summary-card";
 import { requireRole } from "@/lib/auth/session";
 import { getParentMetrics } from "@/lib/dashboard/data";
-import { Users, CalendarDays, CheckCircle2, TrendingUp } from "lucide-react";
+import { Users } from "lucide-react";
 
 export default async function ParentDashboardPage() {
   const user = await requireRole(["parent"]);
@@ -13,10 +13,10 @@ export default async function ParentDashboardPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
-        <SummaryCard label="Status Pembayaran" value={metrics.paymentStatus} detail={metrics.paymentDetail} />
-        <SummaryCard label="Jadwal Anak Hari Ini" value={String(metrics.schedule)} detail={`${metrics.children} anak terdaftar`} />
-        <SummaryCard label="Kehadiran Anak" value={metrics.attendance} detail="Akumulasi kehadiran" />
-        <SummaryCard label="Nilai Terbaru" value="-" detail="Menunggu modul evaluasi" />
+        <SummaryCard label="Pembayaran" value={metrics.paymentStatus} detail={metrics.paymentDetail} />
+        <SummaryCard label="Jadwal Hari Ini" value={String(metrics.schedule)} detail={`${metrics.children} anak terdaftar`} />
+        <SummaryCard label="Kehadiran" value={metrics.attendance} detail="Akumulasi absensi anak" />
+        <SummaryCard label="Nilai" value="-" detail="Modul nilai belum tersedia" />
       </div>
 
       {/* Children Detail Section */}
@@ -45,6 +45,9 @@ export default async function ParentDashboardPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-ink truncate">{child.full_name}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {child.package_name} - {child.class_names.length ? child.class_names.join(", ") : "Belum masuk kelas"}
+                    </p>
                     <p className="text-xs text-slate-500 mt-0.5">
                       {child.total === 0
                         ? "Belum ada data absensi"

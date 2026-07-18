@@ -32,16 +32,16 @@ function StatCard({
   label: string; value: string; sub?: string; color?: "brand" | "emerald" | "amber" | "red";
 }) {
   const bg = {
-    brand: "bg-indigo-50 text-indigo-600",
-    emerald: "bg-emerald-50 text-emerald-600",
-    amber: "bg-amber-50 text-amber-700",
-    red: "bg-red-50 text-red-600",
+    brand: "text-brand",
+    emerald: "text-sky-600",
+    amber: "text-cyan-600",
+    red: "text-blue-600",
   }[color];
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-      <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${bg.split(" ")[1]}`}>{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-slate-400">{sub}</p>}
+    <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-sm">
+      <p className="text-sm font-semibold text-ink">{label}</p>
+      <p className={`mt-5 text-[28px] font-semibold leading-none ${bg}`}>{value}</p>
+      {sub && <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">{sub}</p>}
     </div>
   );
 }
@@ -64,9 +64,9 @@ function TabSiswa({ rows }: { rows: LaporanSiswaRow[] }) {
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Total Siswa" value={String(rows.length)} sub="Terdaftar di sistem" />
+        <StatCard label="Siswa" value={String(rows.length)} sub="Terdaftar di sistem" />
         <StatCard label="Siswa Aktif" value={String(siswaAktif)} sub="Memiliki riwayat absensi" color="emerald" />
-        <StatCard label="Rata-rata Kehadiran" value={`${avgHadir}%`} sub="Dari seluruh sesi" color={avgHadir >= 75 ? "emerald" : "amber"} />
+        <StatCard label="Rata-rata Hadir" value={`${avgHadir}%`} sub="Dari seluruh sesi" color={avgHadir >= 75 ? "emerald" : "amber"} />
       </div>
 
       {/* Search + Table */}
@@ -80,7 +80,7 @@ function TabSiswa({ rows }: { rows: LaporanSiswaRow[] }) {
               placeholder="Cari nama siswa…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="text-sm border border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 w-52"
+              className="text-sm border border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-200 w-52"
             />
           </div>
         </div>
@@ -170,7 +170,7 @@ function TabAbsensi({
         <select
           value={bulan}
           onChange={(e) => onBulan(Number(e.target.value))}
-          className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+          className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
         >
           {MONTHS.map((m, i) => (
             <option key={m} value={i + 1}>{m}</option>
@@ -179,7 +179,7 @@ function TabAbsensi({
         <select
           value={tahun}
           onChange={(e) => onTahun(Number(e.target.value))}
-          className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+          className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
         >
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
@@ -190,7 +190,7 @@ function TabAbsensi({
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-4">
-        <StatCard label="Total Sesi" value={String(data.totalSesi)} sub="Seluruh absensi" />
+        <StatCard label="Sesi" value={String(data.totalSesi)} sub="Seluruh absensi" />
         <StatCard label="Hadir" value={String(data.totalHadir)} sub="Hadir & terlambat" color="emerald" />
         <StatCard label="Izin / Sakit" value={String(data.totalIzin)} sub="Keterangan" color="amber" />
         <StatCard label="Tidak Hadir" value={String(data.totalTidakHadir)} sub="Tanpa keterangan" color="red" />
@@ -241,7 +241,7 @@ function TabPembayaran({
         <select
           value={tahun}
           onChange={(e) => onTahun(Number(e.target.value))}
-          className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+          className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
         >
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
@@ -251,20 +251,20 @@ function TabPembayaran({
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Total Pendapatan"
+          label="Pendapatan"
           value={formatRp(data.totalPendapatan)}
           sub={`Tahun ${tahun}`}
           color="brand"
         />
-        <StatCard label="Total Transaksi" value={String(data.totalTransaksi)} sub="Pembayaran diterima" color="emerald" />
+        <StatCard label="Transaksi" value={String(data.totalTransaksi)} sub="Pembayaran diterima" color="emerald" />
         <StatCard label="Invoice Lunas" value={String(data.totalLunas)} sub={`dari ${data.totalInvoice} invoice`} color="emerald" />
         <StatCard label="Belum Lunas" value={String(data.totalBelumLunas)} sub="Belum dibayar" color={data.totalBelumLunas > 0 ? "red" : "emerald"} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Kas Masuk" value={formatRp(data.totalKasMasuk)} sub="SPP + pemasukan arus kas" color="emerald" />
-        <StatCard label="Kas Keluar" value={formatRp(data.totalKasKeluar)} sub="Payroll + pengeluaran arus kas" color="red" />
-        <StatCard label="Saldo Kas" value={formatRp(data.saldoKas)} sub="Rekap laporan keuangan" color={data.saldoKas >= 0 ? "brand" : "red"} />
+        <StatCard label="Penerimaan" value={formatRp(data.totalKasMasuk)} sub="SPP + kas manual" color="emerald" />
+        <StatCard label="Pengeluaran" value={formatRp(data.totalKasKeluar)} sub="Payroll + kas manual" color="red" />
+        <StatCard label="Saldo Bersih" value={formatRp(data.saldoKas)} sub="Penerimaan - pengeluaran" color={data.saldoKas >= 0 ? "brand" : "red"} />
       </div>
 
       {/* Chart */}
@@ -379,7 +379,7 @@ export function LaporanManager({
             onClick={() => setTab(key)}
             className={`flex flex-shrink-0 items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
               tab === key
-                ? "bg-white text-indigo-600 shadow-sm"
+                ? "bg-white text-brand shadow-sm"
                 : "text-slate-500 hover:text-slate-700"
             }`}
           >

@@ -25,8 +25,8 @@ export default async function MentorSlipGajiPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <SummaryCard label="Slip Gaji Terbaru" value={latest ? `${MONTHS[latest.month - 1]} ${latest.year}` : "-"} detail={latest ? formatRp(latest.total_amount) : "Belum ada slip"} />
-          <SummaryCard label="Total Pendapatan Bulan Ini" value={formatRp(incomeThisMonth)} detail="Berdasarkan payroll bulan berjalan" />
+          <SummaryCard label="Slip Terbaru" value={latest ? `${MONTHS[latest.month - 1]} ${latest.year}` : "-"} detail={latest ? `Nominal ${formatRp(latest.total_amount)}` : "Belum ada slip"} />
+          <SummaryCard label="Pendapatan Bulan Ini" value={formatRp(incomeThisMonth)} detail="Payroll periode ini" />
         </div>
 
         <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white">

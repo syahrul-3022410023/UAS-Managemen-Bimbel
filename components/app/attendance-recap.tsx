@@ -1,13 +1,12 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ElementType } from "react";
 import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
-  ChevronRight,
   Clock,
   TrendingUp,
   Users,
@@ -37,21 +36,24 @@ function SummaryCard({
   label,
   value,
   color,
+  detail,
 }: {
   icon: ElementType;
   label: string;
   value: string | number;
   color: string;
+  detail: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-4">
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color}`}>
-        <Icon size={18} className="text-white" />
+    <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4">
+      <div className="flex items-center gap-3">
+        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${color}`}>
+          <Icon size={15} strokeWidth={2.2} className="text-white" />
+        </div>
+        <p className="min-w-0 text-sm font-semibold text-ink">{label}</p>
       </div>
-      <div>
-        <p className="text-xs text-slate-500">{label}</p>
-        <p className="text-lg font-bold text-ink">{value}</p>
-      </div>
+      <p className="mt-7 text-[28px] font-semibold leading-none text-ink">{value}</p>
+      <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">{detail}</p>
     </div>
   );
 }
@@ -60,7 +62,8 @@ export function AttendanceRecap({ rows }: { rows: AttendanceRecapRow[] }) {
   const [filterClass, setFilterClass] = useState("");
   const [filterMentor, setFilterMentor] = useState("");
   const [filterMentorStatus, setFilterMentorStatus] = useState("");
-  const [expandedScheduleId, setExpandedScheduleId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
 
   const classes = useMemo(
     () => [...new Set(rows.map((r) => r.class_name))].sort(),
@@ -91,19 +94,36 @@ export function AttendanceRecap({ rows }: { rows: AttendanceRecapRow[] }) {
   const avgAttendance = totalStudentRecords > 0
     ? Math.round((totalPresent / totalStudentRecords) * 100)
     : 0;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const visibleRows = useMemo(
+    () => filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page]
+  );
+  const dateTimeFormatter = useMemo(
+    () => new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }),
+    []
+  );
+  const fromRow = filtered.length === 0 ? 0 : (page - 1) * pageSize + 1;
+  const toRow = Math.min(page * pageSize, filtered.length);
 
-  const fmt = (iso: string) =>
-    new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
+  useEffect(() => {
+    setPage(1);
+  }, [filterClass, filterMentor, filterMentorStatus]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const fmt = (iso: string) => dateTimeFormatter.format(new Date(iso));
 
   const resetFilters = () => {
     setFilterClass("");
     setFilterMentor("");
     setFilterMentorStatus("");
-    setExpandedScheduleId(null);
   };
 
   return (
-    <>
+    <div className="attendance-recap-page">
       <div className="mb-8">
         <h1 className="app-title-primary">Rekapitulasi Absensi</h1>
         <p className="mt-1 text-sm text-slate-500">
@@ -111,14 +131,14 @@ export function AttendanceRecap({ rows }: { rows: AttendanceRecapRow[] }) {
         </p>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <SummaryCard icon={CalendarDays} label="Total Sesi" value={totalSessions} color="bg-brand" />
-        <SummaryCard icon={TrendingUp} label="Rata-rata Kehadiran" value={`${avgAttendance}%`} color="bg-emerald-500" />
-        <SummaryCard icon={CheckCircle2} label="Siswa Hadir" value={totalPresent} color="bg-cyan-500" />
-        <SummaryCard icon={Users} label="Total Rekap Siswa" value={totalStudentRecords} color="bg-violet-500" />
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <SummaryCard icon={CalendarDays} label="Sesi" value={totalSessions} detail="Jadwal tampil" color="bg-brand" />
+        <SummaryCard icon={TrendingUp} label="Rata-rata Hadir" value={`${avgAttendance}%`} detail="Dari rekap siswa" color="bg-sky-500" />
+        <SummaryCard icon={CheckCircle2} label="Hadir" value={totalPresent} detail="Siswa hadir" color="bg-cyan-500" />
+        <SummaryCard icon={Users} label="Rekap Siswa" value={totalStudentRecords} detail="Total catatan" color="bg-blue-500" />
       </div>
 
-      <section className="mb-4 rounded-2xl border border-slate-100 bg-white p-4">
+      <section className="mb-4 rounded-2xl border border-slate-100 bg-white p-3">
         <div className="flex flex-wrap gap-3">
           <FilterSelect label="Semua Kelas" value={filterClass} onChange={setFilterClass} options={classes} />
           <FilterSelect label="Semua Mentor" value={filterMentor} onChange={setFilterMentor} options={mentors} />
@@ -150,16 +170,16 @@ export function AttendanceRecap({ rows }: { rows: AttendanceRecapRow[] }) {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] text-sm">
+      <section className="attendance-table-shell rounded-2xl border border-slate-100 bg-white">
+        <div className="attendance-table-static">
+          <table className="attendance-table w-full table-fixed text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-5 py-3.5">Waktu Sesi</th>
                 <th className="px-5 py-3.5">Kelas</th>
                 <th className="px-5 py-3.5">Mentor</th>
                 <th className="px-5 py-3.5 text-center">Status Mentor</th>
-                <th className="px-5 py-3.5 text-center">Detail Siswa</th>
+                <th className="px-5 py-3.5 text-center">Jumlah Siswa</th>
                 <MetricHeader icon={CheckCircle2} label="Hadir" color="text-emerald-500" />
                 <MetricHeader icon={Clock} label="Terlambat" color="text-amber-500" />
                 <MetricHeader icon={BookOpen} label="Izin" color="text-blue-500" />
@@ -167,86 +187,21 @@ export function AttendanceRecap({ rows }: { rows: AttendanceRecapRow[] }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map((row) => {
-                const isExpanded = expandedScheduleId === row.schedule_id;
-                return (
-                  <Fragment key={row.schedule_id}>
-                    <tr className="transition-colors hover:bg-slate-50/60">
-                      <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{fmt(row.starts_at)}</td>
-                      <td className="px-5 py-3.5 font-medium text-ink">{row.class_name}</td>
-                      <td className="px-5 py-3.5 text-slate-600">{row.mentor_name}</td>
-                      <td className="px-5 py-3.5 text-center">
-                        <StatusBadge status={row.mentor_status} />
-                      </td>
-                      <td className="px-5 py-3.5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => setExpandedScheduleId(isExpanded ? null : row.schedule_id)}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-brand transition hover:border-brand/30 hover:bg-brand/5"
-                        >
-                          <ChevronRight size={14} className={`transition ${isExpanded ? "rotate-90" : ""}`} />
-                          {row.students.length} siswa
-                        </button>
-                      </td>
-                      <td className="px-5 py-3.5 text-center font-semibold text-emerald-600">{row.count_present}</td>
-                      <td className="px-5 py-3.5 text-center font-semibold text-amber-600">{row.count_late}</td>
-                      <td className="px-5 py-3.5 text-center font-semibold text-blue-600">{row.count_excused}</td>
-                      <td className="px-5 py-3.5 text-center font-semibold text-red-500">{row.count_absent}</td>
-                    </tr>
-
-                    {isExpanded && (
-                      <tr>
-                        <td colSpan={9} className="bg-slate-50/60 px-5 py-4">
-                          <div className="rounded-2xl border border-slate-100 bg-white p-4">
-                            <div className="mb-3 flex items-center justify-between gap-3">
-                              <div>
-                                <p className="text-sm font-bold text-ink">Detail Absensi Siswa</p>
-                                <p className="mt-0.5 text-xs text-slate-500">{row.class_name} - {fmt(row.starts_at)}</p>
-                              </div>
-                              <span className="rounded-full bg-[#EEF0FF] px-3 py-1 text-xs font-bold text-brand">
-                                {row.students.length} siswa
-                              </span>
-                            </div>
-
-                            {row.students.length > 0 ? (
-                              <div className="max-h-[360px] overflow-auto rounded-xl border border-slate-100">
-                                <table className="w-full min-w-[560px] text-sm">
-                                  <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                                    <tr>
-                                      <th className="px-4 py-3">No</th>
-                                      <th className="px-4 py-3">Nama Siswa</th>
-                                      <th className="px-4 py-3 text-center">Status</th>
-                                      <th className="px-4 py-3">Catatan</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-slate-100 bg-white">
-                                    {row.students.map((student, index) => (
-                                      <tr key={student.id} className="hover:bg-slate-50/70">
-                                        <td className="w-14 px-4 py-3 text-slate-400">{index + 1}</td>
-                                        <td className="px-4 py-3 font-semibold text-ink">{student.full_name}</td>
-                                        <td className="px-4 py-3 text-center">
-                                          <StatusBadge status={student.status} />
-                                        </td>
-                                        <td className="px-4 py-3 text-slate-500">
-                                          {student.notes || <span className="text-slate-400">Tidak ada catatan</span>}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            ) : (
-                              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-400">
-                                Belum ada siswa terdaftar di kelas ini.
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
+              {visibleRows.map((row) => (
+                <tr key={row.schedule_id} className="hover:bg-slate-50/60">
+                  <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{fmt(row.starts_at)}</td>
+                  <td className="px-5 py-3.5 font-medium text-ink">{row.class_name}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{row.mentor_name}</td>
+                  <td className="px-5 py-3.5 text-center">
+                    <StatusBadge status={row.mentor_status} />
+                  </td>
+                  <td className="px-5 py-3.5 text-center text-sm font-semibold text-slate-600">{row.total_students} siswa</td>
+                  <td className="px-5 py-3.5 text-center font-semibold text-emerald-600">{row.count_present}</td>
+                  <td className="px-5 py-3.5 text-center font-semibold text-amber-600">{row.count_late}</td>
+                  <td className="px-5 py-3.5 text-center font-semibold text-blue-600">{row.count_excused}</td>
+                  <td className="px-5 py-3.5 text-center font-semibold text-red-500">{row.count_absent}</td>
+                </tr>
+              ))}
 
               {filtered.length === 0 && (
                 <tr>
@@ -260,12 +215,38 @@ export function AttendanceRecap({ rows }: { rows: AttendanceRecapRow[] }) {
         </div>
 
         {filtered.length > 0 && (
-          <div className="border-t border-slate-100 px-5 py-3 text-xs text-slate-400">
-            Menampilkan {filtered.length} dari {rows.length} sesi
+          <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-3 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Menampilkan {fromRow}-{toRow} dari {filtered.length} sesi
+              {filtered.length !== rows.length ? `, tersaring dari ${rows.length}` : ""}
+            </span>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={page === 1}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Sebelumnya
+                </button>
+                <span className="px-1 text-slate-400">
+                  {page}/{totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  disabled={page === totalPages}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Berikutnya
+                </button>
+              </div>
+            )}
           </div>
         )}
       </section>
-    </>
+    </div>
   );
 }
 

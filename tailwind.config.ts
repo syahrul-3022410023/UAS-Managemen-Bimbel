@@ -26,9 +26,9 @@ const config: Config = {
         ink: "#111827",
         surface: "#F2F2F3",
         surfaceDim: "#ECEEF5",
-        brand: "#3947FF",
-        brandHover: "#2432D8",
-        accent: "#6D5DFF",
+        brand: "#2563EB",
+        brandHover: "#1D4ED8",
+        accent: "#06B6D4",
         success: "#16A34A",
       },
       boxShadow: {

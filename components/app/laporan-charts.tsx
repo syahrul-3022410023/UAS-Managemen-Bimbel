@@ -148,12 +148,12 @@ export function PembayaranLineChart({ data }: { data: PembayaranPoint[] }) {
         <ComposedChart data={data} margin={{ top: 10, right: 18, left: -8, bottom: 0 }}>
           <defs>
             <linearGradient id="pendapatanLine" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#3947FF" />
-              <stop offset="100%" stopColor="#6D5DFF" />
+              <stop offset="0%" stopColor="#2563EB" />
+              <stop offset="100%" stopColor="#06B6D4" />
             </linearGradient>
             <linearGradient id="pendapatanArea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3947FF" stopOpacity="0.22" />
-              <stop offset="100%" stopColor="#3947FF" stopOpacity="0" />
+              <stop offset="0%" stopColor="#2563EB" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="#2563EB" stopOpacity="0" />
             </linearGradient>
           </defs>
           <CartesianGrid vertical={false} stroke="#ECEEF5" strokeDasharray="4 8" />
@@ -187,8 +187,8 @@ export function PembayaranLineChart({ data }: { data: PembayaranPoint[] }) {
             stroke="url(#pendapatanLine)"
             strokeWidth={3}
             fill="url(#pendapatanArea)"
-            dot={{ r: 4, fill: "#ffffff", stroke: "#3947FF", strokeWidth: 2 }}
-            activeDot={{ r: 6, fill: "#3947FF", stroke: "#ffffff", strokeWidth: 3 }}
+            dot={{ r: 4, fill: "#ffffff", stroke: "#2563EB", strokeWidth: 2 }}
+            activeDot={{ r: 6, fill: "#2563EB", stroke: "#ffffff", strokeWidth: 3 }}
             isAnimationActive
           />
           <Line
@@ -222,7 +222,7 @@ function PembayaranTooltip({ active, payload, label }: any) {
           return (
             <div key={`${item.dataKey ?? item.name}-${index}`} className="flex items-center justify-between gap-4">
               <span className="inline-flex items-center gap-2 text-slate-500">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: isRevenue ? "#3947FF" : "#10B981" }} />
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: isRevenue ? "#2563EB" : "#10B981" }} />
                 {isRevenue ? "Pendapatan" : "Transaksi"}
               </span>
               <span className="font-bold text-ink">
