@@ -4,10 +4,10 @@ import React from "react";
 
 export function AuthIllustration() {
   return (
-    <div className="relative flex h-full w-full flex-col justify-between overflow-hidden rounded-[1.8rem] bg-gradient-to-br from-[#0B255E] via-[#1E60FF] to-[#38BDF8] p-5 md:p-8 text-white shadow-inner">
+    <div className="relative flex h-full w-full flex-col justify-between overflow-hidden rounded-[1.65rem] bg-gradient-to-br from-[#EEF0FF] via-[#D7DCFF] to-[#B7BFFF] p-5 md:p-8 text-[#111827]">
       {/* Background Floating Hexagons */}
       <svg
-        className="absolute inset-0 h-full w-full pointer-events-none"
+        className="auth-illustration-orbit absolute inset-0 h-full w-full pointer-events-none"
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
@@ -19,6 +19,7 @@ export function AuthIllustration() {
         
         {/* Hexagon 1 */}
         <polygon
+          className="auth-hex auth-hex-1"
           points="320,120 350,102 380,120 380,155 350,173 320,155"
           fill="url(#hex-grad)"
           stroke="rgba(255, 255, 255, 0.12)"
@@ -27,6 +28,7 @@ export function AuthIllustration() {
         
         {/* Hexagon 2 */}
         <polygon
+          className="auth-hex auth-hex-2"
           points="240,240 265,225 290,240 290,270 265,285 240,270"
           fill="none"
           stroke="rgba(255, 255, 255, 0.08)"
@@ -35,6 +37,7 @@ export function AuthIllustration() {
         
         {/* Hexagon 3 */}
         <polygon
+          className="auth-hex auth-hex-3"
           points="380,220 415,200 450,220 450,260 415,280 380,260"
           fill="url(#hex-grad)"
           stroke="rgba(255, 255, 255, 0.15)"
@@ -43,6 +46,7 @@ export function AuthIllustration() {
 
         {/* Hexagon 4 - small top */}
         <polygon
+          className="auth-hex auth-hex-4"
           points="80,60 95,51 110,60 110,78 95,87 80,78"
           fill="none"
           stroke="rgba(255, 255, 255, 0.05)"
@@ -53,9 +57,9 @@ export function AuthIllustration() {
       {/* Top Branding Section */}
       <div className="relative z-10 w-full">
         {/* Logo Icon */}
-        <div className="flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-sm">
+        <div className="flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-full bg-white/55 backdrop-blur-md border border-white/70">
           <svg
-            className="h-5 w-5 md:h-6 md:w-6 text-white"
+            className="h-5 w-5 md:h-6 md:w-6 text-brand"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -71,10 +75,10 @@ export function AuthIllustration() {
         </div>
 
         {/* Typography / Copywriting */}
-        <h2 className="auth-illustration-title mt-2.5 md:mt-8 text-lg md:app-title-primary text-white leading-snug max-w-sm">
+        <h2 className="auth-illustration-title mt-2.5 md:mt-8 text-lg md:app-title-primary text-[#111827] leading-snug max-w-sm">
           Satu klik untuk kelola semua bimbingan belajar.
         </h2>
-        <p className="auth-illustration-desc mt-3 md:mt-4 hidden md:block app-caption text-white/50 leading-relaxed max-w-xs">
+        <p className="auth-illustration-desc mt-3 md:mt-4 hidden md:block app-caption text-slate-500 leading-relaxed max-w-xs">
           Pantau perkembangan belajar siswa, jadwal kelas, dan presensi secara real-time dalam satu platform bimbel terintegrasi.
         </p>
       </div>
@@ -86,7 +90,7 @@ export function AuthIllustration() {
           {/* Potted Plant */}
           <div className="mb-1.5 md:mb-2 shrink-0">
             <svg
-              className="h-14 md:h-20 w-8 md:w-12 select-none filter drop-shadow-md"
+              className="auth-plant h-14 md:h-20 w-8 md:w-12 select-none"
               viewBox="0 0 60 100"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -107,7 +111,7 @@ export function AuthIllustration() {
           {/* Stylized Standing Character (Facing slightly right) */}
           <div className="shrink-0">
             <svg
-              className="auth-illustration-character h-36 sm:h-44 md:h-56 w-16 sm:w-20 md:w-24 select-none filter drop-shadow-lg"
+              className="auth-illustration-character h-36 sm:h-44 md:h-56 w-16 sm:w-20 md:w-24 select-none"
               viewBox="0 0 120 260"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -115,6 +119,10 @@ export function AuthIllustration() {
               {/* Hair/Head */}
               <circle cx="55" cy="35" r="14" fill="#0F172A" />
               <circle cx="57" cy="37" r="11" fill="#FDBA74" />
+              <g className="auth-character-eyes">
+                <circle cx="54" cy="36" r="1.3" fill="#0F172A" />
+                <circle cx="62" cy="36" r="1.3" fill="#0F172A" />
+              </g>
               {/* Beard */}
               <path d="M 52,42 Q 62,50 67,42 Q 67,36 57,35 Z" fill="#0F172A" />
               {/* Nose */}
@@ -154,11 +162,7 @@ export function AuthIllustration() {
         >
           {/* Tilted Tablet Case */}
           <div
-            className="w-[180px] sm:w-[220px] md:w-[280px] h-[125px] sm:h-[150px] md:h-[190px] rounded-xl md:rounded-2xl bg-white p-2 md:p-3 shadow-2xl border border-slate-100/50 select-none transition-all duration-500 hover:rotate-y-[-15deg] hover:translate-x-1"
-            style={{
-              transform: "rotateY(-24deg) rotateX(16deg) rotateZ(3deg)",
-              transformStyle: "preserve-3d",
-            }}
+            className="auth-tablet-body w-[180px] sm:w-[220px] md:w-[280px] h-[125px] sm:h-[150px] md:h-[190px] rounded-xl md:rounded-2xl bg-white/95 p-2 md:p-3 border border-white select-none transition-all duration-500 hover:translate-x-1"
           >
             {/* Tablet Header / Bar */}
             <div className="flex justify-between items-center mb-1.5 md:mb-2.5">
@@ -177,48 +181,63 @@ export function AuthIllustration() {
               {/* Left Widget: Upward Trend line */}
               <div className="col-span-2 bg-slate-50/80 rounded-lg md:rounded-xl p-1.5 md:p-2.5 flex flex-col justify-between border border-slate-100">
                 <div className="flex items-center space-x-1 md:space-x-2">
-                  <div className="w-4 h-4 md:w-6 md:h-6 rounded-full bg-blue-100 flex items-center justify-center shadow-sm">
+                  <div className="w-4 h-4 md:w-6 md:h-6 rounded-full bg-blue-100 flex items-center justify-center">
                     <span className="text-[7px] md:text-[10px] text-blue-800 font-bold">M</span>
                   </div>
                   <div>
-                    <div className="w-10 md:w-14 h-1 md:h-1.5 bg-slate-200 rounded" />
-                    <div className="w-6 md:w-8 h-0.5 md:h-1 bg-slate-100 rounded mt-0.5" />
+                    <div className="auth-skeleton w-10 md:w-14 h-1 md:h-1.5 bg-slate-200 rounded" />
+                    <div className="auth-skeleton auth-skeleton-short w-6 md:w-8 h-0.5 md:h-1 bg-slate-100 rounded mt-0.5" />
                   </div>
                 </div>
 
                 {/* Graph visualization - Blue stroke */}
                 <svg className="w-full h-9 md:h-14 mt-1" viewBox="0 0 100 40">
                   <path
+                    className="auth-trend-line"
                     d="M 0,35 Q 20,20 40,26 T 80,12 T 100,6"
                     fill="none"
-                    stroke="#1E60FF"
+                    stroke="#3947FF"
                     strokeWidth="2.5"
                     strokeLinecap="round"
                   />
                   <path
+                    className="auth-trend-fill"
                     d="M 0,35 Q 20,20 40,26 T 80,12 T 100,6 L 100,40 L 0,40 Z"
                     fill="url(#trend-grad-m)"
                     opacity="0.12"
                   />
                   <defs>
                     <linearGradient id="trend-grad-m" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#1E60FF" />
-                      <stop offset="100%" stopColor="#1E60FF" stopOpacity="0" />
+                      <stop offset="0%" stopColor="#3947FF" />
+                      <stop offset="100%" stopColor="#3947FF" stopOpacity="0" />
                     </linearGradient>
                   </defs>
                   {/* Indicator Dot */}
-                  <circle cx="100" cy="6" r="2.5" fill="#1E60FF" />
-                  <circle cx="100" cy="6" r="4.5" fill="#1E60FF" opacity="0.3" className="animate-ping" />
+                  <circle className="auth-trend-dot" r="2.5" fill="#3947FF">
+                    <animateMotion
+                      dur="4.8s"
+                      path="M 0,35 Q 20,20 40,26 T 80,12 T 100,6"
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                  <circle className="auth-trend-halo" r="4.5" fill="#3947FF" opacity="0.3">
+                    <animateMotion
+                      dur="4.8s"
+                      path="M 0,35 Q 20,20 40,26 T 80,12 T 100,6"
+                      repeatCount="indefinite"
+                    />
+                  </circle>
                 </svg>
               </div>
               
               {/* Right Widget Column */}
               <div className="flex flex-col space-y-1 md:space-y-2">
                 {/* Micro Dark Widget */}
-                <div className="bg-slate-900 text-white rounded-lg md:rounded-xl p-1 md:p-2 flex-1 flex flex-col justify-between shadow-inner">
+                <div className="bg-slate-900 text-white rounded-lg md:rounded-xl p-1 md:p-2 flex-1 flex flex-col justify-between">
                   <div className="w-6 h-1 bg-slate-800 rounded" />
                   <svg className="w-full h-6 mt-0.5" viewBox="0 0 50 20">
                     <path
+                      className="auth-live-line"
                       d="M 0,16 Q 12,4 25,12 T 50,4"
                       fill="none"
                       stroke="#F43F5E"
@@ -229,8 +248,8 @@ export function AuthIllustration() {
                 </div>
                 
                 {/* Live Indicator / Action button - Blue */}
-                <div className="bg-[#1E60FF] text-white rounded-lg md:rounded-xl p-1 md:p-2 flex items-center justify-center space-x-1 shadow-md shadow-blue-900/10 hover:bg-[#124CC2] cursor-pointer transition-all duration-300">
-                  <div className="w-2.5 h-2.5 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
+                <div className="auth-live-button bg-brand text-white rounded-lg md:rounded-xl p-1 md:p-2 flex items-center justify-center space-x-1 hover:bg-brandHover cursor-pointer transition-all duration-300">
+                  <div className="auth-live-dot w-2.5 h-2.5 rounded-full bg-white/20 flex items-center justify-center">
                     <div className="w-1 h-1 rounded-full bg-white" />
                   </div>
                   <span className="text-[6px] md:text-[8px] font-extrabold tracking-wider">LIVE</span>

@@ -13,8 +13,8 @@ export async function generateMetadata({ params }: Props) {
   const invoice = await getInvoiceDetail(id);
   return {
     title: invoice
-      ? `Invoice ${invoice.student_name} | BimbelPro`
-      : "Invoice | BimbelPro",
+      ? `Invoice SPP ${invoice.student_name} | BimbelPro`
+      : "Invoice SPP | BimbelPro",
   };
 }
 
@@ -30,8 +30,8 @@ export default async function AdminInvoiceDetailPage({ params }: Props) {
       role={user.role}
       email={user.email}
       name={user.name}
-      title="Detail Invoice"
-      activeNav="Invoice"
+      title="Detail Invoice SPP"
+      activeNav="Invoice SPP"
     >
       <InvoiceDetailView invoice={invoice} />
     </AppShell>

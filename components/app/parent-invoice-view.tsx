@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, FileText, CheckCircle2, Clock, XCircle, AlertCircle, ChevronRight } from "lucide-react";
+import { Search, FileText, CheckCircle2, AlertCircle, ChevronRight } from "lucide-react";
 import type { InvoiceRow } from "@/app/billing/page-data";
 
 const MONTHS = [
@@ -11,9 +11,7 @@ const MONTHS = [
 
 const statusConfig = {
   unpaid:    { label: "Belum Dibayar", icon: AlertCircle,   color: "bg-red-50 text-red-600 border-red-200" },
-  partial:   { label: "Bayar Sebagian", icon: Clock,        color: "bg-amber-50 text-amber-600 border-amber-200" },
   paid:      { label: "Lunas",          icon: CheckCircle2, color: "bg-emerald-50 text-emerald-600 border-emerald-200" },
-  cancelled: { label: "Dibatalkan",     icon: XCircle,      color: "bg-slate-50 text-slate-500 border-slate-200" },
 };
 
 function StatusBadge({ status }: { status: InvoiceRow["status"] }) {
@@ -46,7 +44,7 @@ export function ParentInvoiceView({ invoices }: { invoices: InvoiceRow[] }) {
   const stats = useMemo(() => ({
     total: invoices.reduce((sum, inv) => sum + inv.amount, 0),
     paid: invoices.filter((i) => i.status === "paid").reduce((sum, i) => sum + i.total_paid, 0),
-    unpaid: invoices.filter((i) => i.status === "unpaid" || i.status === "partial")
+    unpaid: invoices.filter((i) => i.status === "unpaid")
       .reduce((sum, i) => sum + (i.amount - i.total_paid), 0),
   }), [invoices]);
 
@@ -54,7 +52,7 @@ export function ParentInvoiceView({ invoices }: { invoices: InvoiceRow[] }) {
     <>
       {/* Header */}
       <div className="mb-8">
-        <h1 className="app-title-primary">Invoice & Tagihan</h1>
+        <h1 className="app-title-primary">Invoice SPP</h1>
         <p className="mt-1 text-sm text-slate-500">
           Daftar tagihan bimbel anak Anda.
         </p>
@@ -101,7 +99,7 @@ export function ParentInvoiceView({ invoices }: { invoices: InvoiceRow[] }) {
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="font-semibold text-slate-800">{inv.student_name}</p>
-                    <p className="text-xs text-slate-500">{MONTHS[inv.month - 1]} {inv.year}</p>
+                    <p className="text-xs text-slate-500">{inv.invoice_number ?? "-"} - {MONTHS[inv.month - 1]} {inv.year}</p>
                   </div>
                   <StatusBadge status={inv.status} />
                 </div>
@@ -132,10 +130,11 @@ export function ParentInvoiceView({ invoices }: { invoices: InvoiceRow[] }) {
 
         {/* Desktop table */}
         <div className="hidden sm:block overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
+          <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-5 py-3 font-semibold">Siswa</th>
+                <th className="px-5 py-3 font-semibold">No. Invoice</th>
                 <th className="px-5 py-3 font-semibold">Periode</th>
                 <th className="px-5 py-3 font-semibold">Paket</th>
                 <th className="px-5 py-3 font-semibold">Tagihan</th>
@@ -148,6 +147,7 @@ export function ParentInvoiceView({ invoices }: { invoices: InvoiceRow[] }) {
               {filtered.map((inv) => (
                 <tr key={inv.id} className="transition hover:bg-slate-50/70">
                   <td className="px-5 py-4 font-medium text-ink">{inv.student_name}</td>
+                  <td className="px-5 py-4 font-semibold text-slate-600">{inv.invoice_number ?? "-"}</td>
                   <td className="px-5 py-4 text-slate-600">
                     {MONTHS[inv.month - 1]} {inv.year}
                   </td>
@@ -170,7 +170,7 @@ export function ParentInvoiceView({ invoices }: { invoices: InvoiceRow[] }) {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-slate-500">
+                  <td colSpan={8} className="px-5 py-12 text-center text-slate-500">
                     <FileText size={32} className="mx-auto mb-3 text-slate-300" />
                     Belum ada invoice.
                   </td>

@@ -136,6 +136,10 @@ export type LaporanPembayaranResult = {
   totalInvoice: number;
   totalLunas: number;
   totalBelumLunas: number;
+  totalPayroll: number;
+  totalKasMasuk: number;
+  totalKasKeluar: number;
+  saldoKas: number;
 };
 
 export async function getLaporanPembayaran(tahun: number): Promise<LaporanPembayaranResult> {
@@ -144,7 +148,7 @@ export async function getLaporanPembayaran(tahun: number): Promise<LaporanPembay
   const start = new Date(`${tahun}-01-01T00:00:00+07:00`);
   const end = new Date(`${tahun + 1}-01-01T00:00:00+07:00`);
 
-  const [{ data: payments }, { data: invoices }] = await Promise.all([
+  const [{ data: payments }, { data: invoices }, { data: payrolls }, { data: cashFlows }] = await Promise.all([
     supabase
       .from("payments")
       .select("amount, paid_at")
@@ -156,6 +160,15 @@ export async function getLaporanPembayaran(tahun: number): Promise<LaporanPembay
       .select("status")
       .gte("created_at", start.toISOString())
       .lt("created_at", end.toISOString()),
+    supabase
+      .from("payrolls")
+      .select("total_amount")
+      .eq("year", tahun),
+    supabase
+      .from("cash_flows")
+      .select("type, amount, transaction_date")
+      .gte("transaction_date", `${tahun}-01-01`)
+      .lt("transaction_date", `${tahun + 1}-01-01`),
   ]);
 
   const BULAN_NAMES = [
@@ -182,7 +195,13 @@ export async function getLaporanPembayaran(tahun: number): Promise<LaporanPembay
   const totalTransaksi = chart.reduce((s, p) => s + p.jumlah_transaksi, 0);
   const totalInvoice = invoices?.length ?? 0;
   const totalLunas = invoices?.filter((i) => i.status === "paid").length ?? 0;
-  const totalBelumLunas = invoices?.filter((i) => i.status === "unpaid" || i.status === "partial").length ?? 0;
+  const totalBelumLunas = invoices?.filter((i) => i.status !== "paid").length ?? 0;
+  const totalPayroll = (payrolls ?? []).reduce((sum, row) => sum + Number(row.total_amount), 0);
+  const cashIncome = (cashFlows ?? []).filter((row) => row.type === "income").reduce((sum, row) => sum + Number(row.amount), 0);
+  const cashExpense = (cashFlows ?? []).filter((row) => row.type === "expense").reduce((sum, row) => sum + Number(row.amount), 0);
+  const totalKasMasuk = totalPendapatan + cashIncome;
+  const totalKasKeluar = totalPayroll + cashExpense;
+  const saldoKas = totalKasMasuk - totalKasKeluar;
 
-  return { chart, totalPendapatan, totalTransaksi, totalInvoice, totalLunas, totalBelumLunas };
+  return { chart, totalPendapatan, totalTransaksi, totalInvoice, totalLunas, totalBelumLunas, totalPayroll, totalKasMasuk, totalKasKeluar, saldoKas };
 }

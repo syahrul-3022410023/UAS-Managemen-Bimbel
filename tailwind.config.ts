@@ -23,17 +23,17 @@ const config: Config = {
         ]
       },
       colors: {
-        ink: "#1D1D1F", // Apple standard dark text
-        surface: "#F5F5F7", // Apple standard light gray background
-        surfaceDim: "#E8E8ED",
-        brand: "#0071E3", // Apple standard blue
-        brandHover: "#0077ED",
-        accent: "#F56300",
-        success: "#34C759", // Apple green
+        ink: "#111827",
+        surface: "#F2F2F3",
+        surfaceDim: "#ECEEF5",
+        brand: "#3947FF",
+        brandHover: "#2432D8",
+        accent: "#6D5DFF",
+        success: "#16A34A",
       },
       boxShadow: {
-        'apple-soft': '0 4px 24px rgba(0, 0, 0, 0.04)',
-        'apple-hover': '0 10px 40px rgba(0, 0, 0, 0.08)',
+        'apple-soft': 'none',
+        'apple-hover': 'none',
       },
       borderRadius: {
         '2xl': '1rem',

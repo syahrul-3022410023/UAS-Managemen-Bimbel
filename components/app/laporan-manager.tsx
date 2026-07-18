@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   Users, CalendarCheck, CreditCard,
-  TrendingUp, CheckCircle2, XCircle, Clock,
+  TrendingUp, CheckCircle2, XCircle,
   BarChart2, AlertCircle,
 } from "lucide-react";
 import { AbsensiBarChart, PembayaranLineChart } from "@/components/app/laporan-charts";
@@ -197,12 +197,22 @@ function TabAbsensi({
       </div>
 
       {/* Chart */}
-      <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart2 size={16} className="text-slate-400" />
-          <h3 className="text-sm font-semibold text-slate-700">
-            Grafik Kehadiran — {MONTHS[bulan - 1]} {tahun}
-          </h3>
+      <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-apple-soft">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#EEF0FF] text-brand">
+              <BarChart2 size={17} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-ink">
+                Grafik Kehadiran - {MONTHS[bulan - 1]} {tahun}
+              </h3>
+              <p className="mt-0.5 text-xs text-slate-500">Distribusi status kehadiran per tanggal.</p>
+            </div>
+          </div>
+          <span className="w-fit rounded-full border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-500">
+            {data.chart.length} tanggal
+          </span>
         </div>
         <AbsensiBarChart data={data.chart} />
       </div>
@@ -248,16 +258,32 @@ function TabPembayaran({
         />
         <StatCard label="Total Transaksi" value={String(data.totalTransaksi)} sub="Pembayaran diterima" color="emerald" />
         <StatCard label="Invoice Lunas" value={String(data.totalLunas)} sub={`dari ${data.totalInvoice} invoice`} color="emerald" />
-        <StatCard label="Belum Lunas" value={String(data.totalBelumLunas)} sub="Unpaid / partial" color={data.totalBelumLunas > 0 ? "red" : "emerald"} />
+        <StatCard label="Belum Lunas" value={String(data.totalBelumLunas)} sub="Belum dibayar" color={data.totalBelumLunas > 0 ? "red" : "emerald"} />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Kas Masuk" value={formatRp(data.totalKasMasuk)} sub="SPP + pemasukan arus kas" color="emerald" />
+        <StatCard label="Kas Keluar" value={formatRp(data.totalKasKeluar)} sub="Payroll + pengeluaran arus kas" color="red" />
+        <StatCard label="Saldo Kas" value={formatRp(data.saldoKas)} sub="Rekap laporan keuangan" color={data.saldoKas >= 0 ? "brand" : "red"} />
       </div>
 
       {/* Chart */}
-      <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp size={16} className="text-slate-400" />
-          <h3 className="text-sm font-semibold text-slate-700">
-            Grafik Pendapatan — Tahun {tahun}
-          </h3>
+      <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-apple-soft">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#EEF0FF] text-brand">
+              <TrendingUp size={17} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-ink">
+                Grafik Pendapatan - Tahun {tahun}
+              </h3>
+              <p className="mt-0.5 text-xs text-slate-500">Tren pendapatan dan jumlah transaksi bulanan.</p>
+            </div>
+          </div>
+          <span className="w-fit rounded-full border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-500">
+            {data.chart.length} bulan
+          </span>
         </div>
         <PembayaranLineChart data={data.chart} />
       </div>
@@ -277,28 +303,6 @@ function TabPembayaran({
                 <div
                   className="h-full bg-emerald-400 rounded-full transition-all"
                   style={{ width: data.totalInvoice > 0 ? `${(data.totalLunas / data.totalInvoice) * 100}%` : "0%" }}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Clock size={16} className="text-amber-500 shrink-0" />
-            <div className="flex-1">
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-slate-600">Sebagian</span>
-                <span className="font-medium text-amber-600">
-                  {data.totalInvoice - data.totalLunas - data.totalBelumLunas < 0 ? 0
-                    : data.totalInvoice - data.totalLunas - data.totalBelumLunas}
-                </span>
-              </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-amber-400 rounded-full transition-all"
-                  style={{
-                    width: data.totalInvoice > 0
-                      ? `${(Math.max(0, data.totalInvoice - data.totalLunas - data.totalBelumLunas) / data.totalInvoice) * 100}%`
-                      : "0%",
-                  }}
                 />
               </div>
             </div>

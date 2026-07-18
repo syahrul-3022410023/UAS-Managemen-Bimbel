@@ -9,6 +9,29 @@ export async function getMasterRows(entity: MasterEntity) {
   return (data ?? []) as MasterRecord[];
 }
 
+export async function getPackageRows() {
+  const supabase = await createSupabaseServerClient();
+  const [{ data: packages, error }, { data: subjects }] = await Promise.all([
+    supabase.from("packages").select("*").order("created_at", { ascending: false }),
+    supabase.from("subjects").select("id, name").order("name")
+  ]);
+  if (error) throw new Error(error.message);
+  const subjectNames = new Map((subjects ?? []).map(item => [item.id, item.name]));
+  return (packages ?? []).map(item => ({
+    ...item,
+    subject_name: item.subject_id ? subjectNames.get(item.subject_id) ?? "Mapel tidak ditemukan" : "Semua Mapel",
+    status_label: item.status === "inactive" ? "Nonaktif" : "Aktif"
+  })) as MasterRecord[];
+}
+
+export async function getPackageOptions() {
+  const supabase = await createSupabaseServerClient();
+  const { data: subjects } = await supabase.from("subjects").select("id, name").order("name");
+  return {
+    subjects: (subjects ?? []).map(item => ({ value: item.id, label: item.name }))
+  };
+}
+
 async function getAccountWorkspace(entity: "mentors" | "parents", role: "mentor" | "parent") {
   const supabase = await createSupabaseServerClient();
   const [{ data: people, error: peopleError }, { data: profiles, error: profilesError }] = await Promise.all([
@@ -52,20 +75,29 @@ export async function getStudentRows() {
   const supabase = await createSupabaseServerClient();
   const [{ data: students, error }, { data: parents }, { data: packages }] = await Promise.all([
     supabase.from("students").select("*").order("created_at", { ascending: false }),
-    supabase.from("parents").select("id, full_name"),
+    supabase.from("parents").select("id, full_name, phone"),
     supabase.from("packages").select("id, name")
   ]);
   if (error) throw new Error(error.message);
   const parentNames = new Map((parents ?? []).map(parent => [parent.id, parent.full_name]));
+  const parentPhones = new Map((parents ?? []).map(parent => [parent.id, parent.phone]));
   const packageNames = new Map((packages ?? []).map(item => [item.id, item.name]));
-  return (students ?? []).map(student => ({ ...student, parent_name: parentNames.get(student.parent_id) ?? null, package_name: packageNames.get(student.package_id) ?? null }));
+  return (students ?? []).map(student => ({
+    ...student,
+    parent_name: parentNames.get(student.parent_id) ?? null,
+    parent_phone: student.parent_phone ?? parentPhones.get(student.parent_id) ?? null,
+    package_name: packageNames.get(student.package_id) ?? null
+  }));
 }
 
 export async function getStudentOptions() {
   const supabase = await createSupabaseServerClient();
   const [{ data: parents }, { data: packages }] = await Promise.all([
-    supabase.from("parents").select("id, full_name").order("full_name"),
+    supabase.from("parents").select("id, full_name, phone").order("full_name"),
     supabase.from("packages").select("id, name").order("name")
   ]);
-  return { parents: (parents ?? []).map(item => ({ value: item.id, label: item.full_name })), packages: (packages ?? []).map(item => ({ value: item.id, label: item.name })) };
+  return {
+    parents: (parents ?? []).map(item => ({ value: item.id, label: item.phone ? `${item.full_name} - ${item.phone}` : item.full_name })),
+    packages: (packages ?? []).map(item => ({ value: item.id, label: item.name }))
+  };
 }

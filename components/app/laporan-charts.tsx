@@ -1,9 +1,9 @@
 "use client";
 
 import {
-  BarChart, Bar, LineChart, Line,
+  BarChart, Bar, ComposedChart, Line, Area,
   XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend,
+  ResponsiveContainer,
 } from "recharts";
 
 // ─── Currency formatter ───────────────────────────────────────────────────────
@@ -27,27 +27,98 @@ type AbsensiPoint = {
 export function AbsensiBarChart({ data }: { data: AbsensiPoint[] }) {
   if (!data.length)
     return (
-      <div className="flex h-48 items-center justify-center text-sm text-slate-400">
+      <div className="flex h-64 items-center justify-center rounded-2xl bg-slate-50 text-sm text-slate-400">
         Tidak ada data absensi pada periode ini
       </div>
     );
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={data} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-        <XAxis dataKey="tanggal" tick={{ fontSize: 11, fill: "#94a3b8" }} />
-        <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} allowDecimals={false} />
-        <Tooltip
-          contentStyle={{ borderRadius: 12, fontSize: 13, border: "1px solid #e2e8f0" }}
-          formatter={(v, name) => [v, name === "hadir" ? "Hadir" : name === "izin" ? "Izin/Sakit" : "Tidak Hadir"]}
-          labelFormatter={(l) => `Tanggal: ${l}`}
-        />
-        <Legend formatter={(v) => v === "hadir" ? "Hadir" : v === "izin" ? "Izin/Sakit" : "Tidak Hadir"} />
-        <Bar dataKey="hadir" fill="#10b981" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="izin" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="tidak_hadir" fill="#ef4444" radius={[4, 4, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
+    <div className="rounded-2xl bg-gradient-to-b from-slate-50/70 to-white px-2 pb-2 pt-4">
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-2 px-2">
+        <ChartPill color="bg-emerald-500" label="Hadir" />
+        <ChartPill color="bg-amber-400" label="Izin/Sakit" />
+        <ChartPill color="bg-red-400" label="Tidak Hadir" />
+      </div>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={data} barGap={8} barCategoryGap="32%" margin={{ top: 8, right: 18, left: -18, bottom: 0 }}>
+          <defs>
+            <linearGradient id="hadirGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#10B981" />
+              <stop offset="100%" stopColor="#34D399" />
+            </linearGradient>
+            <linearGradient id="izinGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#F59E0B" />
+              <stop offset="100%" stopColor="#FBBF24" />
+            </linearGradient>
+            <linearGradient id="absenGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#EF4444" />
+              <stop offset="100%" stopColor="#FB7185" />
+            </linearGradient>
+          </defs>
+          <CartesianGrid vertical={false} stroke="#ECEEF5" strokeDasharray="4 8" />
+          <XAxis
+            dataKey="tanggal"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 11, fill: "#8A96AA", fontWeight: 600 }}
+            dy={10}
+          />
+          <YAxis
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 11, fill: "#8A96AA", fontWeight: 600 }}
+            allowDecimals={false}
+          />
+          <Tooltip
+            cursor={{ fill: "rgba(57, 71, 255, 0.045)", radius: 16 }}
+            content={<AbsensiTooltip />}
+          />
+          <Bar dataKey="hadir" fill="url(#hadirGrad)" radius={[12, 12, 4, 4]} maxBarSize={42} />
+          <Bar dataKey="izin" fill="url(#izinGrad)" radius={[12, 12, 4, 4]} maxBarSize={42} />
+          <Bar dataKey="tidak_hadir" fill="url(#absenGrad)" radius={[12, 12, 4, 4]} maxBarSize={42} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function ChartPill({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
+      <span className={`h-2 w-2 rounded-full ${color}`} />
+      {label}
+    </span>
+  );
+}
+
+function AbsensiTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+
+  const names: Record<string, string> = {
+    hadir: "Hadir",
+    izin: "Izin/Sakit",
+    tidak_hadir: "Tidak Hadir",
+  };
+  const colors: Record<string, string> = {
+    hadir: "#10B981",
+    izin: "#F59E0B",
+    tidak_hadir: "#EF4444",
+  };
+
+  return (
+    <div className="min-w-[160px] rounded-2xl border border-slate-100 bg-white/95 p-3 text-xs backdrop-blur">
+      <p className="mb-2 font-bold text-ink">Tanggal {label}</p>
+      <div className="space-y-1.5">
+        {payload.map((item: any) => (
+          <div key={item.dataKey} className="flex items-center justify-between gap-4">
+            <span className="inline-flex items-center gap-2 text-slate-500">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: colors[item.dataKey] ?? "#94A3B8" }} />
+              {names[item.dataKey] ?? item.name}
+            </span>
+            <span className="font-bold text-ink">{item.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -60,43 +131,107 @@ type PembayaranPoint = {
 };
 
 export function PembayaranLineChart({ data }: { data: PembayaranPoint[] }) {
+  if (!data.length)
+    return (
+      <div className="flex h-64 items-center justify-center rounded-2xl bg-slate-50 text-sm text-slate-400">
+        Tidak ada data pembayaran pada periode ini
+      </div>
+    );
+
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <LineChart data={data} margin={{ top: 4, right: 16, left: 10, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-        <XAxis dataKey="bulan" tick={{ fontSize: 11, fill: "#94a3b8" }} />
-        <YAxis
-          yAxisId="left"
-          tick={{ fontSize: 11, fill: "#94a3b8" }}
-          tickFormatter={(v) => `${(v / 1_000_000).toFixed(0)}jt`}
-        />
-        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#94a3b8" }} allowDecimals={false} />
-        <Tooltip
-          contentStyle={{ borderRadius: 12, fontSize: 13, border: "1px solid #e2e8f0" }}
-          formatter={(v, name) =>
-            name === "pendapatan" ? [formatRp(Number(v)), "Pendapatan"] : [v, "Transaksi"]
-          }
-        />
-        <Legend formatter={(v) => v === "pendapatan" ? "Pendapatan" : "Jumlah Transaksi"} />
-        <Line
-          yAxisId="left"
-          type="monotone"
-          dataKey="pendapatan"
-          stroke="#6366f1"
-          strokeWidth={2.5}
-          dot={{ r: 4, fill: "#6366f1" }}
-          activeDot={{ r: 6 }}
-        />
-        <Line
-          yAxisId="right"
-          type="monotone"
-          dataKey="jumlah_transaksi"
-          stroke="#10b981"
-          strokeWidth={2}
-          dot={{ r: 3, fill: "#10b981" }}
-          strokeDasharray="5 3"
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    <div className="rounded-2xl bg-gradient-to-b from-slate-50/70 to-white px-2 pb-2 pt-4">
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-2 px-2">
+        <ChartPill color="bg-brand" label="Pendapatan" />
+        <ChartPill color="bg-emerald-500" label="Jumlah Transaksi" />
+      </div>
+      <ResponsiveContainer width="100%" height={310}>
+        <ComposedChart data={data} margin={{ top: 10, right: 18, left: -8, bottom: 0 }}>
+          <defs>
+            <linearGradient id="pendapatanLine" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#3947FF" />
+              <stop offset="100%" stopColor="#6D5DFF" />
+            </linearGradient>
+            <linearGradient id="pendapatanArea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#3947FF" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="#3947FF" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <CartesianGrid vertical={false} stroke="#ECEEF5" strokeDasharray="4 8" />
+          <XAxis
+            dataKey="bulan"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 11, fill: "#8A96AA", fontWeight: 600 }}
+            dy={10}
+          />
+          <YAxis
+            yAxisId="left"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 11, fill: "#8A96AA", fontWeight: 600 }}
+            tickFormatter={(v) => `${(v / 1_000_000).toFixed(0)}jt`}
+          />
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 11, fill: "#8A96AA", fontWeight: 600 }}
+            allowDecimals={false}
+          />
+          <Tooltip cursor={{ stroke: "#D8DCFF", strokeWidth: 1 }} content={<PembayaranTooltip />} />
+          <Area
+            yAxisId="left"
+            type="monotone"
+            dataKey="pendapatan"
+            stroke="url(#pendapatanLine)"
+            strokeWidth={3}
+            fill="url(#pendapatanArea)"
+            dot={{ r: 4, fill: "#ffffff", stroke: "#3947FF", strokeWidth: 2 }}
+            activeDot={{ r: 6, fill: "#3947FF", stroke: "#ffffff", strokeWidth: 3 }}
+            isAnimationActive
+          />
+          <Line
+            yAxisId="right"
+            type="monotone"
+            dataKey="jumlah_transaksi"
+            stroke="#10B981"
+            strokeWidth={2.5}
+            dot={{ r: 3, fill: "#ffffff", stroke: "#10B981", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: "#10B981", stroke: "#ffffff", strokeWidth: 2 }}
+            strokeDasharray="6 5"
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function PembayaranTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  const uniquePayload = Array.from(
+    new Map(payload.map((item: any) => [String(item.dataKey ?? item.name), item])).values()
+  );
+
+  return (
+    <div className="min-w-[190px] rounded-2xl border border-slate-100 bg-white/95 p-3 text-xs backdrop-blur">
+      <p className="mb-2 font-bold text-ink">{label}</p>
+      <div className="space-y-1.5">
+        {uniquePayload.map((item: any, index) => {
+          const isRevenue = item.dataKey === "pendapatan";
+          return (
+            <div key={`${item.dataKey ?? item.name}-${index}`} className="flex items-center justify-between gap-4">
+              <span className="inline-flex items-center gap-2 text-slate-500">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: isRevenue ? "#3947FF" : "#10B981" }} />
+                {isRevenue ? "Pendapatan" : "Transaksi"}
+              </span>
+              <span className="font-bold text-ink">
+                {isRevenue ? formatRp(Number(item.value)) : item.value}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

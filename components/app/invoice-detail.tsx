@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import {
-  ArrowLeft, CheckCircle2, Clock, XCircle, AlertCircle,
+  ArrowLeft, CheckCircle2, AlertCircle,
   Plus, Trash2, X, CreditCard, Banknote, QrCode, MoreHorizontal
 } from "lucide-react";
 import Link from "next/link";
@@ -18,9 +19,7 @@ const MONTHS = [
 
 const statusConfig = {
   unpaid:    { label: "Belum Dibayar", icon: AlertCircle,   color: "bg-red-50 text-red-600 border-red-200" },
-  partial:   { label: "Bayar Sebagian", icon: Clock,        color: "bg-amber-50 text-amber-600 border-amber-200" },
   paid:      { label: "Lunas",          icon: CheckCircle2, color: "bg-emerald-50 text-emerald-600 border-emerald-200" },
-  cancelled: { label: "Dibatalkan",     icon: XCircle,      color: "bg-slate-50 text-slate-500 border-slate-200" },
 };
 
 const methodIcons: Record<string, React.ReactNode> = {
@@ -58,6 +57,7 @@ function PaymentForm({
   invoice: InvoiceDetail;
   onClose: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
   const [message, setMessage] = useState<string>();
   const [isPending, startTransition] = useTransition();
   const remaining = invoice.amount - invoice.total_paid;
@@ -74,12 +74,25 @@ function PaymentForm({
     });
   };
 
-  return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto bg-slate-900/40">
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-900/40">
       <div className="flex min-h-full items-end justify-center sm:items-center sm:p-6">
       <form
         onSubmit={(e) => { e.preventDefault(); submit(e.currentTarget); }}
-        className="w-full bg-white p-6 shadow-2xl rounded-t-3xl sm:max-w-lg sm:rounded-3xl sm:my-8"
+        className="w-full bg-white p-6 rounded-t-3xl sm:max-w-lg sm:rounded-3xl sm:my-8"
       >
         <div className="mb-6 flex items-start justify-between">
           <div>
@@ -176,7 +189,8 @@ function PaymentForm({
         </div>
       </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -190,7 +204,7 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
   const remaining = invoice.amount - invoice.total_paid;
   const progress = Math.min(100, (invoice.total_paid / invoice.amount) * 100);
 
-  const handleStatusUpdate = (status: "unpaid" | "partial" | "paid" | "cancelled") => {
+  const handleStatusUpdate = (status: "unpaid" | "paid") => {
     if (!window.confirm(`Ubah status invoice menjadi "${statusConfig[status].label}"?`)) return;
     startTransition(async () => {
       const result = await updateInvoiceStatus(invoice.id, status);
@@ -236,7 +250,7 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
                 </div>
                 <h1 className="text-xl font-bold text-slate-900">{invoice.student_name}</h1>
                 <p className="mt-1 text-sm text-slate-500">
-                  Invoice {MONTHS[invoice.month - 1]} {invoice.year}
+                  {invoice.invoice_number ?? "Invoice SPP"} - {MONTHS[invoice.month - 1]} {invoice.year}
                   {invoice.package_name && ` · ${invoice.package_name}`}
                 </p>
               </div>
@@ -291,7 +305,7 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
           <div className="rounded-2xl border border-slate-100 bg-white shadow-apple-soft">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <h2 className="font-semibold text-slate-900">Riwayat Pembayaran</h2>
-              {invoice.status !== "paid" && invoice.status !== "cancelled" && (
+              {invoice.status !== "paid" && (
                 <button
                   onClick={() => setShowPaymentForm(true)}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand/90 transition"
@@ -359,7 +373,7 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
           <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-apple-soft">
             <h3 className="mb-4 font-semibold text-slate-900">Ubah Status Invoice</h3>
             <div className="space-y-2">
-              {(["unpaid", "partial", "paid", "cancelled"] as const).map((s) => {
+              {(["unpaid", "paid"] as const).map((s) => {
                 const cfg = statusConfig[s];
                 const Icon = cfg.icon;
                 const isActive = invoice.status === s;

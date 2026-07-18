@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import {
   Search, Plus, X, FileText, CheckCircle2,
-  Clock, XCircle, AlertCircle, ChevronRight
+  AlertCircle, ChevronRight
 } from "lucide-react";
-import { generateInvoice, updateInvoiceStatus } from "@/app/billing/actions";
+import { generateInvoice } from "@/app/billing/actions";
 import type { InvoiceRow, StudentOption } from "@/app/billing/page-data";
 import Link from "next/link";
 
@@ -18,9 +19,7 @@ const MONTHS = [
 
 const statusConfig = {
   unpaid:    { label: "Belum Dibayar", icon: AlertCircle,   color: "bg-red-50 text-red-600 border-red-200" },
-  partial:   { label: "Bayar Sebagian", icon: Clock,        color: "bg-amber-50 text-amber-600 border-amber-200" },
   paid:      { label: "Lunas",          icon: CheckCircle2, color: "bg-emerald-50 text-emerald-600 border-emerald-200" },
-  cancelled: { label: "Dibatalkan",     icon: XCircle,      color: "bg-slate-50 text-slate-500 border-slate-200" },
 };
 
 function StatusBadge({ status }: { status: InvoiceRow["status"] }) {
@@ -47,6 +46,7 @@ function GenerateForm({
   students: StudentOption[];
   onClose: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<StudentOption | null>(null);
   const [message, setMessage] = useState<string>();
   const [isPending, startTransition] = useTransition();
@@ -79,16 +79,29 @@ function GenerateForm({
     });
   };
 
-  return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto bg-slate-900/40">
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-900/40">
       <div className="flex min-h-full items-end justify-center sm:items-center sm:p-6">
       <form
         onSubmit={(e) => { e.preventDefault(); submit(e.currentTarget); }}
-        className="w-full bg-white p-6 shadow-2xl rounded-t-3xl sm:max-w-lg sm:rounded-3xl sm:my-8"
+        className="w-full bg-white p-6 rounded-t-3xl sm:max-w-lg sm:rounded-3xl sm:my-8"
       >
         <div className="mb-6 flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Generate Invoice</h2>
+            <h2 className="text-lg font-bold text-slate-900">Generate Invoice SPP</h2>
             <p className="mt-1 text-sm text-slate-500">Buat tagihan untuk siswa berdasarkan paket.</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
@@ -198,12 +211,13 @@ function GenerateForm({
             disabled={isPending}
             className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand/90 disabled:opacity-60"
           >
-            {isPending ? "Membuat..." : "Generate Invoice"}
+            {isPending ? "Membuat..." : "Generate Invoice SPP"}
           </button>
         </div>
       </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -234,7 +248,6 @@ export function InvoiceManager({ invoices, students }: Props) {
   const stats = useMemo(() => ({
     total: invoices.length,
     unpaid: invoices.filter((i) => i.status === "unpaid").length,
-    partial: invoices.filter((i) => i.status === "partial").length,
     paid: invoices.filter((i) => i.status === "paid").length,
     revenue: invoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.total_paid, 0),
   }), [invoices]);
@@ -244,7 +257,7 @@ export function InvoiceManager({ invoices, students }: Props) {
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="app-title-primary">Manajemen Invoice</h1>
+          <h1 className="app-title-primary">Invoice SPP</h1>
           <p className="mt-1 text-sm text-slate-500">
             Kelola tagihan dan status pembayaran siswa bimbel.
           </p>
@@ -254,7 +267,7 @@ export function InvoiceManager({ invoices, students }: Props) {
           className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand/90"
         >
           <Plus size={17} />
-          Generate Invoice
+          Generate Invoice SPP
         </button>
       </div>
 
@@ -263,7 +276,6 @@ export function InvoiceManager({ invoices, students }: Props) {
         {[
           { label: "Total Invoice", value: stats.total, color: "text-slate-700" },
           { label: "Belum Dibayar", value: stats.unpaid, color: "text-red-600" },
-          { label: "Bayar Sebagian", value: stats.partial, color: "text-amber-600" },
           { label: "Lunas", value: stats.paid, color: "text-emerald-600" },
         ].map((s) => (
           <div key={s.label} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-apple-soft">
@@ -277,7 +289,7 @@ export function InvoiceManager({ invoices, students }: Props) {
       <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-apple-soft">
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap gap-2">
-            {["all", "unpaid", "partial", "paid", "cancelled"].map((s) => (
+            {["all", "unpaid", "paid"].map((s) => (
               <button
                 key={s}
                 onClick={() => setFilterStatus(s)}
@@ -302,11 +314,54 @@ export function InvoiceManager({ invoices, students }: Props) {
           </label>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="divide-y divide-slate-100 sm:hidden">
+          {filtered.map((inv) => {
+            const remaining = Math.max(0, inv.amount - inv.total_paid);
+            return (
+              <article key={inv.id} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="truncate text-base font-bold text-ink">{inv.student_name}</h2>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-400">{inv.invoice_number ?? "-"} - {MONTHS[inv.month - 1]} {inv.year}</p>
+                  </div>
+                  <StatusBadge status={inv.status} />
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-2xl bg-slate-50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Tagihan</p>
+                    <p className="mt-1 font-bold text-ink">{formatCurrency(inv.amount)}</p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Sisa</p>
+                    <p className={`mt-1 font-bold ${remaining > 0 ? "text-red-600" : "text-emerald-600"}`}>{formatCurrency(remaining)}</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
+                  <span className="min-w-0 truncate">{inv.package_name ?? "-"}</span>
+                  <span className="shrink-0">Tempo {new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(inv.due_date))}</span>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <Link href={`/admin/invoice/${inv.id}`} className="rounded-xl bg-[#EEF0FF] px-3 py-2 text-xs font-bold text-brand">
+                    Detail
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="px-5 py-12 text-center text-sm text-slate-500">
+              <FileText size={32} className="mx-auto mb-3 text-slate-300" />
+              Belum ada invoice yang cocok.
+            </div>
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[700px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-5 py-3 font-semibold">Siswa</th>
+                <th className="px-5 py-3 font-semibold">No. Invoice</th>
                 <th className="px-5 py-3 font-semibold">Periode</th>
                 <th className="px-5 py-3 font-semibold">Paket</th>
                 <th className="px-5 py-3 font-semibold">Tagihan</th>
@@ -320,6 +375,7 @@ export function InvoiceManager({ invoices, students }: Props) {
               {filtered.map((inv) => (
                 <tr key={inv.id} className="transition hover:bg-slate-50/70">
                   <td className="px-5 py-4 font-medium text-ink">{inv.student_name}</td>
+                  <td className="px-5 py-4 font-semibold text-slate-600">{inv.invoice_number ?? "-"}</td>
                   <td className="px-5 py-4 text-slate-600">
                     {MONTHS[inv.month - 1]} {inv.year}
                   </td>
@@ -352,7 +408,7 @@ export function InvoiceManager({ invoices, students }: Props) {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-slate-500">
+                  <td colSpan={9} className="px-5 py-12 text-center text-slate-500">
                     <FileText size={32} className="mx-auto mb-3 text-slate-300" />
                     Belum ada invoice yang cocok.
                   </td>

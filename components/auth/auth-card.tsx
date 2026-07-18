@@ -10,9 +10,9 @@ type AuthCardProps = {
 
 export function AuthCard({ title, description, children, footer }: AuthCardProps) {
   return (
-    <main className="auth-main flex min-h-screen items-center justify-center bg-[#F3F6FA] p-4 md:p-6 lg:p-8">
+    <main className="auth-main flex min-h-screen items-center justify-center bg-[#F2F2F3] p-4 md:p-6 lg:p-8">
       {/* Container Card - Designed to fill the desktop screen elegantly (h-[85vh]) but keep clean margins */}
-      <section className="auth-card relative flex flex-col md:flex-row w-full max-w-6xl items-stretch rounded-3xl md:rounded-[2.2rem] border border-slate-100 bg-white p-2.5 md:p-3.5 shadow-[0_24px_60px_rgba(20,50,90,0.07)] md:h-[86vh] md:max-h-[720px] md:min-h-[580px]">
+      <section className="auth-card relative flex flex-col md:flex-row w-full max-w-6xl items-stretch rounded-3xl md:rounded-[2rem] border border-[#ECEEF5] bg-white p-2.5 md:p-3.5 md:h-[86vh] md:max-h-[720px] md:min-h-[580px]">
         
         {/* Left Side: Custom Illustration Panel - Banner on mobile, full panel on desktop */}
         <div className="w-full md:w-[48%] shrink-0 h-[300px] md:h-full flex">

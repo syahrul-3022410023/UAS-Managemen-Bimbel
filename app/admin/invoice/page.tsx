@@ -5,7 +5,7 @@ import { getAdminInvoices } from "@/app/billing/page-data";
 import { getStudentOptions } from "@/app/billing/page-data";
 
 export const metadata = {
-  title: "Invoice | BimbelPro",
+  title: "Invoice SPP | BimbelPro",
   description: "Kelola invoice dan tagihan bimbel",
 };
 
@@ -21,8 +21,8 @@ export default async function AdminInvoicePage() {
       role={user.role}
       email={user.email}
       name={user.name}
-      title="Invoice"
-      activeNav="Invoice"
+      title="Invoice SPP"
+      activeNav="Invoice SPP"
     >
       <InvoiceManager invoices={invoices} students={students} />
     </AppShell>

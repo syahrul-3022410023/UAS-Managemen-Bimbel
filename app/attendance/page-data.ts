@@ -33,6 +33,7 @@ export type AttendanceRecapRow = {
   count_late: number;
   count_excused: number;
   count_absent: number;
+  students: AttendanceStudent[];
 };
 
 // ─── Admin: recap all sessions ────────────────────────────────────────────────
@@ -45,6 +46,7 @@ export async function getAdminAttendanceRecap(): Promise<AttendanceRecapRow[]> {
     { data: classes },
     { data: mentors },
     { data: enrollments },
+    { data: students },
     { data: studentAttendance },
     { data: mentorAttendance },
   ] = await Promise.all([
@@ -52,7 +54,8 @@ export async function getAdminAttendanceRecap(): Promise<AttendanceRecapRow[]> {
     supabase.from("classes").select("id, name"),
     supabase.from("mentors").select("id, full_name"),
     supabase.from("student_classes").select("class_id, student_id"),
-    supabase.from("student_attendance").select("schedule_id, student_id, status"),
+    supabase.from("students").select("id, full_name"),
+    supabase.from("student_attendance").select("schedule_id, student_id, status, notes"),
     supabase.from("mentor_attendance").select("schedule_id, mentor_id, status"),
   ]);
 
@@ -60,6 +63,7 @@ export async function getAdminAttendanceRecap(): Promise<AttendanceRecapRow[]> {
 
   const classNames = new Map((classes ?? []).map((x) => [x.id, x.name]));
   const mentorNames = new Map((mentors ?? []).map((x) => [x.id, x.full_name]));
+  const studentNames = new Map((students ?? []).map((x) => [x.id, x.full_name]));
 
   return (schedules ?? []).map((schedule) => {
     const studentsInClass = (enrollments ?? [])
@@ -82,12 +86,21 @@ export async function getAdminAttendanceRecap(): Promise<AttendanceRecapRow[]> {
       starts_at: schedule.starts_at,
       class_name: classNames.get(schedule.class_id) ?? "Kelas",
       mentor_name: mentorNames.get(schedule.mentor_id) ?? "Mentor",
-      mentor_status: mentorRecord?.status ?? "—",
+      mentor_status: mentorRecord?.status ?? "unrecorded",
       total_students: studentsInClass.length,
       count_present: count("present"),
       count_late: count("late"),
       count_excused: count("excused"),
       count_absent: count("absent"),
+      students: studentsInClass.map((studentId) => {
+        const saved = records.find((a) => a.student_id === studentId);
+        return {
+          id: studentId,
+          full_name: studentNames.get(studentId) ?? "Siswa",
+          status: saved?.status ?? "unrecorded",
+          notes: saved?.notes ?? "",
+        };
+      }),
     };
   });
 }

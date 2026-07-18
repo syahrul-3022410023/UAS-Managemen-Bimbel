@@ -15,10 +15,20 @@ const accountFields = {
   account_password: z.union([z.string().min(8, "Password minimal 8 karakter."), z.literal("")]).optional()
 };
 const schemas = {
-  students: z.object({ full_name: z.string().min(2), student_number: z.string().min(2), birth_date: z.string().optional(), school_name: z.string().optional(), grade: z.string().optional(), parent_id: optionalUuid, package_id: optionalUuid, address: z.string().optional() }),
+  students: z.object({ full_name: z.string().min(2), student_number: z.string().optional(), birth_date: z.string().optional(), school_name: z.string().optional(), grade: z.string().optional(), parent_id: optionalUuid, parent_phone: z.string().optional(), package_id: optionalUuid, address: z.string().optional() }),
   mentors: z.object({ full_name: z.string().min(2), phone: z.string().min(8), specialization: z.string().optional(), address: z.string().optional(), ...accountFields }),
   parents: z.object({ full_name: z.string().min(2), phone: z.string().min(8), address: z.string().optional(), ...accountFields }),
-  packages: z.object({ name: z.string().min(2), duration_months: z.coerce.number().int().positive(), sessions_per_month: z.coerce.number().int().positive(), price: z.preprocess((val) => typeof val === "string" ? Number(val.replace(/\./g, "")) : Number(val), z.number().min(0)), description: z.string().optional() }),
+  packages: z.object({
+    name: z.string().min(2),
+    level: z.string().optional(),
+    subject_id: optionalUuid,
+    duration_months: z.coerce.number().int().positive(),
+    sessions_per_month: z.coerce.number().int().positive(),
+    price: z.preprocess((val) => typeof val === "string" ? Number(val.replace(/\./g, "")) : Number(val), z.number().min(0)),
+    mentor_fee_per_session: z.preprocess((val) => typeof val === "string" ? Number(val.replace(/\./g, "")) : Number(val), z.number().min(0)),
+    status: z.enum(["active", "inactive"]),
+    description: z.string().optional()
+  }),
   subjects: z.object({ name: z.string().min(2), level: z.string().min(2), description: z.string().optional() })
 } as const;
 
@@ -32,6 +42,7 @@ export async function saveMasterData(entity: MasterEntity, id: string | null, ra
   if (!result.success) return { error: result.error.issues[0]?.message ?? "Mohon lengkapi data dengan format yang benar." };
 
   const values = Object.fromEntries(Object.entries(result.data).map(([key, value]) => [key, nullable(value)])) as Record<string, unknown>;
+  if (entity === "students" && !values.student_number) delete values.student_number;
   const email = typeof values.account_email === "string" ? values.account_email : null;
   const password = typeof values.account_password === "string" ? values.account_password : null;
   let profileId = typeof values.profile_id === "string" ? values.profile_id : null;

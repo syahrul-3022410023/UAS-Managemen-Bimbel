@@ -4,13 +4,14 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type InvoiceRow = {
   id: string;
+  invoice_number: string | null;
   student_id: string;
   student_name: string;
   package_id: string | null;
   package_name: string | null;
   amount: number;
   due_date: string;
-  status: "unpaid" | "partial" | "paid" | "cancelled";
+  status: "unpaid" | "paid";
   month: number;
   year: number;
   notes: string | null;
@@ -76,13 +77,14 @@ export async function getAdminInvoices(): Promise<InvoiceRow[]> {
     const student = studentMap.get(inv.student_id);
     return {
       id: inv.id,
+      invoice_number: inv.invoice_number ?? null,
       student_id: inv.student_id,
       student_name: student?.full_name ?? "—",
       package_id: inv.package_id,
       package_name: inv.package_id ? (packageMap.get(inv.package_id) ?? "—") : null,
       amount: Number(inv.amount),
       due_date: inv.due_date,
-      status: inv.status as InvoiceRow["status"],
+      status: inv.status === "paid" ? "paid" : "unpaid",
       month: inv.month,
       year: inv.year,
       notes: inv.notes,
@@ -121,13 +123,14 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
 
   return {
     id: inv.id,
+    invoice_number: inv.invoice_number ?? null,
     student_id: inv.student_id,
     student_name: student?.full_name ?? "—",
     package_id: inv.package_id,
     package_name: inv.package_id ? (packageMap.get(inv.package_id) ?? "—") : null,
     amount: Number(inv.amount),
     due_date: inv.due_date,
-    status: inv.status as InvoiceRow["status"],
+    status: inv.status === "paid" ? "paid" : "unpaid",
     month: inv.month,
     year: inv.year,
     notes: inv.notes,
@@ -243,13 +246,14 @@ export async function getParentInvoices(parentProfileId: string): Promise<Invoic
     const student = studentMap.get(inv.student_id);
     return {
       id: inv.id,
+      invoice_number: inv.invoice_number ?? null,
       student_id: inv.student_id,
       student_name: student?.full_name ?? "—",
       package_id: inv.package_id,
       package_name: inv.package_id ? (packageMap.get(inv.package_id) ?? "—") : null,
       amount: Number(inv.amount),
       due_date: inv.due_date,
-      status: inv.status as InvoiceRow["status"],
+      status: inv.status === "paid" ? "paid" : "unpaid",
       month: inv.month,
       year: inv.year,
       notes: inv.notes,

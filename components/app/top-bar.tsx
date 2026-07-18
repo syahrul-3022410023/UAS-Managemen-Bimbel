@@ -85,44 +85,48 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
 
   return (
     // Removed backdrop-blur from sticky header — causes touch event blocking on Android
-    <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between shadow-sm">
+    <header className="gsm-topbar sticky top-0 z-40 bg-white border-b border-slate-100 px-3 py-3 sm:px-6 sm:py-4 flex items-center justify-between">
       {/* Mobile: Hamburger + Title */}
-      <div className="flex items-center gap-3 sm:hidden">
+      <div className="flex min-w-0 items-center gap-2 sm:hidden">
         <button
           type="button"
           onClick={() => setIsMobileMenuOpen(true)}
           style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent", minWidth: 44, minHeight: 44, padding: 10 }}
-          className="flex items-center justify-center rounded-xl bg-slate-100 text-slate-600 active:bg-slate-200 transition border-none cursor-pointer"
+          className="flex items-center justify-center rounded-xl bg-[#EEF0FF] text-brand active:bg-[#E4E7FF] transition border-none cursor-pointer"
           aria-label="Buka menu"
           aria-expanded={isMobileMenuOpen}
         >
           <Menu size={22} />
         </button>
-        <p className="text-base font-semibold text-ink">{title}</p>
+        <p className="min-w-0 truncate text-base font-bold text-ink">{title}</p>
       </div>
 
       {/* Desktop: Title */}
-      <p className="hidden sm:block mr-4 text-base font-semibold text-ink">{title}</p>
+      <div className="hidden sm:flex mr-8 min-w-[190px] items-center gap-2 text-[13px]">
+        <span className="text-slate-400">Pages</span>
+        <span className="text-slate-300">/</span>
+        <span className="font-semibold text-ink">{title}</span>
+      </div>
 
       {/* Search Bar (Desktop only) */}
-      <div className="relative flex-1 max-w-md hidden sm:block">
-        <div className={`flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border transition ${isSearchFocused ? "border-brand/30 ring-2 ring-brand/10" : "border-slate-100"}`}>
+      <div className="relative ml-auto hidden max-w-sm flex-1 sm:block">
+        <div className={`flex items-center gap-2 bg-white px-3.5 py-2 rounded-xl border transition ${isSearchFocused ? "border-brand/50" : "border-slate-200"}`}>
           <Search size={16} className="text-slate-400" />
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Pencarian..."
+            placeholder="Search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-            className="bg-transparent border-none outline-none text-sm w-full text-slate-700 placeholder-slate-400"
+            className="bg-transparent border-none outline-none text-[13px] w-full text-slate-700 placeholder-slate-400"
           />
         </div>
 
         {/* Search Results Dropdown */}
         {isSearchFocused && searchQuery && (
-          <div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-xl border border-slate-100 py-2 overflow-hidden z-50">
+          <div className="absolute top-full mt-2 w-full bg-white rounded-2xl border border-slate-100 py-2 overflow-hidden z-50">
             {searchResults.length > 0 ? (
               searchResults.map((item) => (
                 <button
@@ -143,24 +147,24 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
       </div>
 
       {/* Right: Profile */}
-      <div className="flex items-center gap-2 ml-auto">
+      <div className="flex items-center gap-2 ml-3">
         <div className="relative" ref={profileRef}>
           <button
             type="button"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
-            className="flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-tr from-brand to-cyan-400 text-white font-medium text-sm shadow-sm hover:opacity-80 transition ml-1"
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-[#EEF0FF] text-brand font-semibold text-sm ring-1 ring-[#D8DCFF] hover:bg-[#E4E7FF] transition ml-1"
             aria-label="Profil"
           >
             {initial}
           </button>
 
           {isProfileOpen && (
-            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50">
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-slate-100 p-2 z-50">
               <div className="px-4 py-3 border-b border-slate-100 mb-2">
                 <p className="text-sm font-bold text-ink truncate">{displayName}</p>
                 <p className="text-xs text-slate-500 truncate">{email}</p>
-                <span className="inline-block mt-2 px-2 py-0.5 bg-brand/10 text-brand text-[10px] font-bold rounded-md uppercase tracking-wide">
+                <span className="inline-block mt-2 px-2 py-0.5 bg-[#EEF0FF] text-brand text-[10px] font-bold rounded-md uppercase tracking-wide">
                   {roleLabels[role]}
                 </span>
               </div>
@@ -193,17 +197,16 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
               position: "relative",
               display: "flex",
               flexDirection: "column",
-              width: "80%",
-              maxWidth: 280,
+              width: "86vw",
+              maxWidth: 320,
               height: "100%",
               backgroundColor: "#ffffff",
-              boxShadow: "4px 0 24px rgba(0,0,0,0.12)",
             }}
           >
             {/* Drawer Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px", borderBottom: "1px solid #f1f5f9" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold" }}>B</div>
+                <div style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "#3947FF", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold" }}>B</div>
                 <span style={{ fontWeight: 700, fontSize: 20, color: "#16202A" }}>BimbelPro</span>
               </div>
               <button
@@ -232,8 +235,8 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
                     textDecoration: "none",
                     fontSize: 14,
                     fontWeight: 500,
-                    color: item.label === title ? "#6366f1" : "#475569",
-                    backgroundColor: item.label === title ? "#eef2ff" : "transparent",
+                    color: item.label === title ? "#3947FF" : "#475569",
+                    backgroundColor: item.label === title ? "#EEF0FF" : "transparent",
                   }}
                 >
                   {item.label}

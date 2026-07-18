@@ -80,7 +80,7 @@ export async function savePayment(invoiceId: string, raw: Record<string, unknown
 
   const supabase = await createSupabaseServerClient();
 
-  // Cek invoice ada dan tidak cancelled
+  // Cek invoice ada dan belum lunas.
   const { data: invoice, error: invError } = await supabase
     .from("invoices")
     .select("id, amount, status")
@@ -88,7 +88,6 @@ export async function savePayment(invoiceId: string, raw: Record<string, unknown
     .maybeSingle();
 
   if (invError || !invoice) return { error: "Invoice tidak ditemukan." };
-  if (invoice.status === "cancelled") return { error: "Invoice sudah dibatalkan." };
   if (invoice.status === "paid") return { error: "Invoice ini sudah lunas." };
 
   // Cek total pembayaran yang sudah masuk
@@ -118,14 +117,7 @@ export async function savePayment(invoiceId: string, raw: Record<string, unknown
 
   // Update status invoice otomatis
   const newTotal = totalPaid + result.data.amount;
-  let newStatus: string;
-  if (newTotal >= Number(invoice.amount)) {
-    newStatus = "paid";
-  } else if (newTotal > 0) {
-    newStatus = "partial";
-  } else {
-    newStatus = "unpaid";
-  }
+  const newStatus = newTotal >= Number(invoice.amount) ? "paid" : "unpaid";
 
   await supabase
     .from("invoices")
@@ -142,7 +134,7 @@ export async function savePayment(invoiceId: string, raw: Record<string, unknown
 
 export async function updateInvoiceStatus(
   invoiceId: string,
-  status: "unpaid" | "partial" | "paid" | "cancelled"
+  status: "unpaid" | "paid"
 ) {
   await requireRole(["admin"]);
   const supabase = await createSupabaseServerClient();
@@ -175,17 +167,14 @@ export async function deletePayment(paymentId: string, invoiceId: string) {
     .eq("id", invoiceId)
     .maybeSingle();
 
-  if (invoice && invoice.status !== "cancelled") {
+  if (invoice) {
     const { data: remaining } = await supabase
       .from("payments")
       .select("amount")
       .eq("invoice_id", invoiceId);
 
     const totalPaid = (remaining ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
-    let newStatus: string;
-    if (totalPaid >= Number(invoice.amount)) newStatus = "paid";
-    else if (totalPaid > 0) newStatus = "partial";
-    else newStatus = "unpaid";
+    const newStatus = totalPaid >= Number(invoice.amount) ? "paid" : "unpaid";
 
     await supabase.from("invoices").update({ status: newStatus }).eq("id", invoiceId);
   }
