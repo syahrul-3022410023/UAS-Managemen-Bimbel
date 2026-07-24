@@ -105,7 +105,7 @@ export default async function AdminDashboardPage() {
         </Link>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid w-full gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label="Penerimaan"
           value={formatCurrency(metrics.totalCashIn)}
@@ -128,8 +128,8 @@ export default async function AdminDashboardPage() {
         />
       </div>
 
-      <div className="mt-5 grid items-stretch gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.85fr)]">
-        <section className="h-full rounded-2xl border border-slate-100 bg-white p-5">
+      <div className="mt-4 grid w-full items-stretch gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.85fr)]">
+        <section className="h-full rounded-2xl border border-slate-100 bg-white p-4 sm:p-5">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <h2 className="text-base font-bold text-ink">Aktivitas Operasional</h2>
@@ -196,7 +196,7 @@ export default async function AdminDashboardPage() {
           </div>
         </section>
 
-        <section className="flex h-full flex-col rounded-2xl border border-slate-100 bg-white p-5">
+        <section className="flex h-full flex-col rounded-2xl border border-slate-100 bg-white p-4 sm:p-5">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-slate-400">Pendapatan Bulan Ini</p>

@@ -24,20 +24,27 @@ export function MasterDataManager({ entity, singular, title, description, fields
   const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<MasterRecord | null | undefined>();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string>();
   const [notice, setNotice] = useState<string>();
+  const [successMsg, setSuccessMsg] = useState<string>();
   const [isPending, startTransition] = useTransition();
   const tableFields = fields.filter(field => field.table !== false);
   const formFields = fields.filter(field => field.form !== false);
   const filtered = useMemo(() => rows.filter(row => Object.values(row).some(value => String(value ?? "").toLowerCase().includes(query.toLowerCase()))), [rows, query]);
-  const close = () => { setEditing(undefined); setMessage(undefined); };
+  const close = () => { setEditing(undefined); setMessage(undefined); setDeletingId(null); };
+
+  const showSuccess = (msg: string) => {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(undefined), 3000);
+  };
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (editing !== undefined) {
+    if (editing !== undefined || deletingId !== null) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -45,34 +52,54 @@ export function MasterDataManager({ entity, singular, title, description, fields
     return () => {
       document.body.style.overflow = "";
     };
-  }, [editing]);
+  }, [editing, deletingId]);
 
   const submit = (form: HTMLFormElement) => {
     const raw = Object.fromEntries(new FormData(form));
     setNotice(undefined);
     startTransition(async () => {
+      const isNew = !editing?.id;
       const result = await saveMasterData(entity, editing?.id ?? null, raw);
       if (result.error) {
         setMessage(result.error);
       } else {
         close();
-        if (result.warning) setNotice(result.warning);
+        if (result.warning) {
+          setNotice(result.warning);
+        } else {
+          showSuccess(isNew ? `${singular} berhasil ditambahkan!` : `${singular} berhasil diperbarui!`);
+        }
       }
     });
   };
   const remove = (id: string) => {
-    if (!window.confirm(`Hapus data ${singular.toLowerCase()} ini?`)) return;
+    setDeletingId(id);
+  };
+  
+  const confirmDelete = () => {
+    if (!deletingId) return;
     setNotice(undefined);
     startTransition(async () => {
-      const result = await deleteMasterData(entity, id);
+      const result = await deleteMasterData(entity, deletingId);
       if (result.error) setMessage(result.error);
       else if (result.warning) setNotice(result.warning);
+      else showSuccess(`${singular} berhasil dihapus.`);
+      setDeletingId(null);
     });
   };
 
   return <>
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="app-title-primary">{title}</h1>{description && <p className="mt-1 text-sm text-slate-500">{description}</p>}</div><button onClick={() => setEditing(null)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brandHover"><Plus size={17} />Tambah {singular}</button></div>
     {notice && <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">{notice}</p>}
+    {successMsg && (
+      <div className="mb-4 flex items-center gap-3 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm font-medium text-emerald-700">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+          <circle cx="8" cy="8" r="8" fill="#10B981" fillOpacity="0.15"/>
+          <path d="M5 8l2 2 4-4" stroke="#059669" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        {successMsg}
+      </div>
+    )}
     <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-apple-soft">
       <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm font-semibold text-ink">{rows.length} data terdaftar</p>
@@ -180,6 +207,43 @@ export function MasterDataManager({ entity, singular, title, description, fields
       </div>
     </section>
     {mounted && editing !== undefined && createPortal(<div className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-900/40"><div className="flex min-h-full items-end justify-center sm:items-center sm:p-6"><form onSubmit={event => { event.preventDefault(); submit(event.currentTarget); }} className="w-full bg-white p-6 rounded-t-3xl sm:max-w-xl sm:rounded-3xl sm:my-8"><div className="mb-6 flex items-start justify-between"><div><h2 className="app-title-secondary">{editing ? `Edit ${singular}` : `Tambah ${singular}`}</h2><p className="mt-1 text-sm text-slate-500">Lengkapi data berikut dengan benar.</p></div><button type="button" onClick={close} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X size={20}/></button></div>{message && <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{message}</p>}<div className="grid gap-4 sm:grid-cols-2">{formFields.map(field => <FieldInput key={field.key} field={field} record={editing}/>)}</div><div className="mt-7 flex justify-end gap-3"><button type="button" onClick={close} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Batal</button><button disabled={isPending} className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brandHover disabled:opacity-60">{isPending ? "Menyimpan..." : "Simpan Data"}</button></div></form></div></div>, document.body)}
+    
+    {/* Delete Confirmation Modal */}
+    {mounted && deletingId !== null && createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-900/40 backdrop-blur-sm transition-opacity">
+        <div className="flex min-h-full items-end justify-center sm:items-center sm:p-6">
+          <div className="w-full bg-white p-6 rounded-t-3xl sm:max-w-md sm:rounded-3xl sm:my-8 shadow-xl">
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                <Trash2 className="h-7 w-7 text-red-500" />
+              </div>
+              <h2 className="app-title-secondary">Hapus Data {singular}?</h2>
+              <p className="mt-2 text-sm text-slate-500">
+                Data yang dihapus tidak dapat dikembalikan. Apakah Anda yakin ingin melanjutkan?
+              </p>
+            </div>
+            
+            <div className="mt-7 flex flex-col-reverse sm:flex-row justify-center gap-3">
+              <button 
+                type="button" 
+                onClick={() => setDeletingId(null)} 
+                className="w-full sm:w-auto rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={confirmDelete}
+                disabled={isPending} 
+                className="w-full sm:w-auto rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-60 flex justify-center items-center gap-2"
+              >
+                {isPending ? "Menghapus..." : "Ya, Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>, 
+      document.body
+    )}
   </>;
 }
 

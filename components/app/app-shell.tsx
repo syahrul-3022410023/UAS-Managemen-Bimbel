@@ -68,7 +68,7 @@ export function AppShell({ role, email, name, title, activeNav, children }: AppS
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
-    <div className="gsm-app-frame h-screen overflow-hidden bg-surface flex text-ink font-sans">
+    <div className="gsm-app-frame w-full max-w-full h-screen overflow-hidden bg-surface flex text-ink font-sans">
       
       {/* Sidebar */}
       <aside className={`gsm-sidebar fixed inset-y-0 left-0 z-50 hidden bg-white md:flex flex-col transition-[width] duration-300 ${isSidebarCollapsed ? "w-[72px]" : "w-[252px]"}`}>
