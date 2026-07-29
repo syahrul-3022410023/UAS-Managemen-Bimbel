@@ -68,7 +68,7 @@ export function AppShell({ role, email, name, title, activeNav, children }: AppS
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
-    <div className="gsm-app-frame w-full max-w-full h-screen overflow-hidden bg-surface flex text-ink font-sans">
+    <div className="gsm-app-frame w-full max-w-full h-dvh overflow-hidden bg-surface flex text-ink font-sans">
       
       {/* Sidebar */}
       <aside className={`gsm-sidebar fixed inset-y-0 left-0 z-50 hidden bg-white md:flex flex-col transition-[width] duration-300 ${isSidebarCollapsed ? "w-[72px]" : "w-[252px]"}`}>
@@ -141,7 +141,7 @@ export function AppShell({ role, email, name, title, activeNav, children }: AppS
       </aside>
 
       {/* Main Content Area */}
-      <div className={`gsm-panel flex-1 flex h-screen flex-col w-full min-w-0 overflow-hidden px-4 pb-4 md:pr-4 md:pb-4 transition-[padding] duration-300 ${isSidebarCollapsed ? "md:pl-[88px]" : "md:pl-[268px]"}`}>
+      <div className={`gsm-panel flex-1 flex h-dvh flex-col w-full min-w-0 overflow-hidden px-4 pb-4 md:pr-4 md:pb-4 transition-[padding] duration-300 ${isSidebarCollapsed ? "md:pl-[88px]" : "md:pl-[268px]"}`}>
         
         <TopBar 
           title={title} 
@@ -152,8 +152,8 @@ export function AppShell({ role, email, name, title, activeNav, children }: AppS
         />
         
         {/* Page Content */}
-        <main className="gsm-content flex-1 overflow-hidden p-5 sm:p-6 md:p-7 w-full min-w-0">
-          <div className="gsm-content-inner h-full overflow-y-auto">
+        <main className="gsm-content flex-grow flex-shrink basis-0 flex flex-col overflow-hidden p-5 sm:p-6 md:p-7 w-full min-w-0">
+          <div className="gsm-content-inner flex-grow flex-shrink basis-0 min-h-0 overflow-y-auto">
             {children}
           </div>
         </main>

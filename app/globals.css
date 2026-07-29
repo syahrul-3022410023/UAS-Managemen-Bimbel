@@ -25,7 +25,6 @@ body {
   min-height: 100vh;
   margin: 0;
   overflow-x: hidden;
-  overflow-y: hidden;
   scrollbar-width: none;
 }
 
@@ -218,10 +217,7 @@ h6 {
   box-shadow: none !important;
   min-height: 0;
   -ms-overflow-style: none;
-  overscroll-behavior: none;
   scrollbar-width: none;
-  user-select: none;
-  -webkit-user-select: none;
 }
 
 .gsm-content::-webkit-scrollbar {
@@ -232,14 +228,13 @@ h6 {
 
 .gsm-content-inner {
   -ms-overflow-style: none;
-  min-height: 100%;
-  overscroll-behavior: none;
+  min-height: 0;
   padding: 0.875rem;
   scroll-padding-top: 1.5rem;
   scrollbar-width: none;
-  /* iOS Safari: enable momentum scrolling + allow vertical touch-pan */
+  /* iOS Safari: enable momentum scrolling */
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
+  overflow-y: auto;
 }
 
 .gsm-content-inner::before,
@@ -271,16 +266,7 @@ h6 {
 
 .gsm-content .overflow-y-auto,
 .gsm-content .overflow-x-auto {
-  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-}
-
-.gsm-content .overflow-y-auto {
-  touch-action: pan-y;
-}
-
-.gsm-content .overflow-x-auto {
-  touch-action: pan-x pan-y;
 }
 
 .gsm-content .overflow-x-auto:has(table) {
@@ -288,7 +274,6 @@ h6 {
   background: #FFFFFF;
   /* overflow-x: hidden removed — was blocking table horizontal scroll on ALL devices */
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y;
 }
 
 .gsm-content .tracking-tight,
