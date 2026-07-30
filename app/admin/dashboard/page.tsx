@@ -189,7 +189,7 @@ export default async function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
             <MiniStat label="Invoice perlu tindakan" value={String(metrics.unpaidInvoices)} />
             <MiniStat label="Pendapatan bulan ini" value={formatCurrency(metrics.revenueThisMonth)} />
             <MiniStat label="Saldo operasional" value={formatCurrency(metrics.cashBalance)} />

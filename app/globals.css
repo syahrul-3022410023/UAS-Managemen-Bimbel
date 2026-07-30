@@ -209,7 +209,7 @@ h6 {
 }
 
 .gsm-content {
-  animation: gsm-page-enter 520ms ease both;
+  animation: gsm-page-enter 120ms ease-out both;
   background: #F6F7F9;
   border-radius: 30px;
   border-top: 0;
@@ -324,7 +324,7 @@ h6 {
 }
 
 .gsm-content-inner > * {
-  animation: gsm-rise-in 460ms ease both;
+  /* Removed heavy rise-in animation to prevent click-to-render lag and massive paint recalculations */
 }
 
 .gsm-content .mb-8 {
