@@ -89,7 +89,7 @@ export function MasterDataManager({ entity, singular, title, description, fields
   };
 
   return <>
-    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="app-title-primary">{title}</h1>{description && <p className="mt-1 text-sm text-slate-500">{description}</p>}</div><button onClick={() => setEditing(null)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brandHover"><Plus size={17} />Tambah {singular}</button></div>
+    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="app-title-primary">{title}</h1>{description && <p className="mt-1 text-sm text-slate-500">{description}</p>}</div><button onClick={() => { setEditing(null); setMessage(undefined); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brandHover"><Plus size={17} />Tambah {singular}</button></div>
     {notice && <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">{notice}</p>}
     {successMsg && (
       <div className="mb-4 flex items-center gap-3 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm font-medium text-emerald-700">
@@ -147,10 +147,10 @@ export function MasterDataManager({ entity, singular, title, description, fields
                   <Eye size={16} /> Detail
                 </a>
               )}
-              <button onClick={() => setEditing(row)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand/10 p-2.5 text-sm font-medium text-brand hover:bg-brand/20 transition">
+              <button onClick={() => { setEditing(row); setMessage(undefined); }} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand/10 p-2.5 text-sm font-medium text-brand hover:bg-brand/20 transition">
                 <Pencil size={16} /> Edit
               </button>
-              <button onClick={() => remove(row.id)} disabled={isPending} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-50 p-2.5 text-sm font-medium text-red-600 hover:bg-red-100 transition disabled:opacity-50">
+              <button onClick={() => { remove(row.id); setMessage(undefined); }} disabled={isPending} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-50 p-2.5 text-sm font-medium text-red-600 hover:bg-red-100 transition disabled:opacity-50">
                 <Trash2 size={16} /> Hapus
               </button>
             </div>
@@ -191,8 +191,8 @@ export function MasterDataManager({ entity, singular, title, description, fields
                 <td className="px-5 py-4">
                   <div className="flex justify-end gap-1">
                     {detailBasePath && <a href={`${detailBasePath}/${row.id}`} className="rounded-lg p-2 text-slate-400 hover:bg-brand/10 hover:text-brand" aria-label="Detail"><Eye size={17} /></a>}
-                    <button onClick={() => setEditing(row)} className="rounded-lg p-2 text-slate-400 hover:bg-brand/10 hover:text-brand" aria-label="Edit"><Pencil size={17} /></button>
-                    <button onClick={() => remove(row.id)} disabled={isPending} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50" aria-label="Hapus"><Trash2 size={17} /></button>
+                    <button onClick={() => { setEditing(row); setMessage(undefined); }} className="rounded-lg p-2 text-slate-400 hover:bg-brand/10 hover:text-brand" aria-label="Edit"><Pencil size={17} /></button>
+                    <button onClick={() => { remove(row.id); setMessage(undefined); }} disabled={isPending} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50" aria-label="Hapus"><Trash2 size={17} /></button>
                   </div>
                 </td>
               </tr>
