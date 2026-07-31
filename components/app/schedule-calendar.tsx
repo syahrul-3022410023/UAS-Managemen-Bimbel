@@ -2,16 +2,22 @@
 
 import { useEffect, useMemo, useState, useTransition, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useSearchParams } from "next/navigation";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { DateSelectArg, EventClickArg } from "@fullcalendar/core";
-import { CalendarPlus, ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react";
+import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react";
 import { deleteSchedule, generateSchedules, saveSchedule } from "@/app/admin/kelas/actions";
+import { EmptyState, EmptyStateRow } from "./empty-state";
+import { DataTableShell } from "./data-table-shell";
+import { ConfirmDialog } from "./confirm-dialog";
+import { AppSelect } from "./app-select";
 
-type Schedule = { id: string; class_id: string; mentor_id: string; starts_at: string; ends_at: string; room: string | null; notes: string | null; class_name: string; mentor_name: string; subject_name?: string; package_name?: string; student_names?: string[]; status_label?: string };
-type Props = { schedules: Schedule[]; classes: { id: string; name: string }[]; mentors: { id: string; full_name: string }[] };
+type Schedule = { id: string; class_id: string; package_id?: string | null; mentor_id: string; starts_at: string; ends_at: string; room: string | null; notes: string | null; class_name: string; mentor_name: string; subject_name?: string; package_name?: string; student_names?: string[]; status_label?: string };
+type ClassOption = { id: string; name: string; mentor_ids?: string[]; packages?: { id: string; name: string }[] };
+type Props = { schedules: Schedule[]; classes: ClassOption[]; mentors: { id: string; full_name: string }[] };
 type PatternDraft = {
   startDate: string;
   endDate: string;
@@ -31,6 +37,8 @@ const weekdayOptions = [
 ];
 
 export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
+  const searchParams = useSearchParams();
+  const selectedClassId = searchParams.get("classId") ?? "";
   const calendarRef = useRef<FullCalendar>(null);
   const [mounted, setMounted] = useState(false);
   const [viewTitle, setViewTitle] = useState("");
@@ -38,9 +46,16 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
   
   const [editing, setEditing] = useState<Schedule | null | undefined>(); 
   const [patternOpen, setPatternOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [message, setMessage] = useState<string>(); 
   const [patternMessage, setPatternMessage] = useState<string>();
   const [isPending, startTransition] = useTransition();
+  const [manualClassId, setManualClassId] = useState("");
+  const [manualPackageId, setManualPackageId] = useState("");
+  const [manualMentorId, setManualMentorId] = useState("");
+  const [patternClassId, setPatternClassId] = useState("");
+  const [patternPackageId, setPatternPackageId] = useState("");
+  const [patternMentorId, setPatternMentorId] = useState("");
   const [patternDraft, setPatternDraft] = useState<PatternDraft>({
     startDate: "",
     endDate: "",
@@ -54,7 +69,15 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
   }, []);
 
   useEffect(() => {
-    if (editing !== undefined || patternOpen) {
+    if (editing !== undefined) {
+      setManualClassId(editing?.class_id ?? "");
+      setManualPackageId(editing?.package_id ?? "");
+      setManualMentorId(editing?.mentor_id ?? "");
+    }
+  }, [editing]);
+
+  useEffect(() => {
+    if (editing !== undefined || patternOpen || deleteOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -62,40 +85,98 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [editing, patternOpen]);
+  }, [editing, patternOpen, deleteOpen]);
   
   const getEventColorStyle = (classId: string) => {
     const hash = classId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const colors = [
-      { bg: "#FFE4E6", border: "#E11D48", text: "#E11D48" }, // pink/red
-      { bg: "#FEF3C7", border: "#D97706", text: "#D97706" }, // yellow/orange
-      { bg: "#E0F2FE", border: "#0284C7", text: "#0369A1" },
-      { bg: "#DBEAFE", border: "#2563EB", text: "#1D4ED8" },
-      { bg: "#D1FAE5", border: "#059669", text: "#059669" }, // emerald
+      { bg: "#EEF6FF", border: "#2F80ED", text: "#1D4ED8" },
+      { bg: "#F2F7FF", border: "#38BDF8", text: "#0369A1" },
+      { bg: "#F4F2FF", border: "#8B5CF6", text: "#6D28D9" },
+      { bg: "#ECFDF5", border: "#10B981", text: "#047857" },
+      { bg: "#FFF7ED", border: "#FB923C", text: "#C2410C" },
     ];
     return colors[hash % colors.length];
   };
 
-  const events = useMemo(() => schedules.map(x => {
-    const colors = getEventColorStyle(x.class_id);
+  const classFilteredSchedules = useMemo(
+    () =>
+      schedules.filter((schedule) => {
+        if (selectedClassId && schedule.class_id !== selectedClassId) return false;
+        return true;
+      }),
+    [schedules, selectedClassId]
+  );
+
+  const visibleSchedules = classFilteredSchedules;
+
+  const initialCalendarDate = useMemo(() => {
+    const first = [...classFilteredSchedules].sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())[0];
+    return first?.starts_at;
+  }, [classFilteredSchedules]);
+
+  const events = useMemo(() => visibleSchedules.map(x => {
+    const title = scheduleTitle(x);
+    const colors = getEventColorStyle(x.class_id || title);
     return {
       id: x.id, 
-      title: `${x.class_name}`, 
+      title, 
       start: x.starts_at, 
       end: x.ends_at, 
-      extendedProps: { schedule: x, colors }
+      extendedProps: { schedule: x, colors, title }
     };
-  }), [schedules]);
+  }), [visibleSchedules]);
 
-  const formSchedule = editing ?? { id: "", class_id: "", mentor_id: "", starts_at: "", ends_at: "", room: null, notes: null, class_name: "", mentor_name: "" };
+  const formSchedule = editing ?? { id: "", class_id: "", package_id: "", mentor_id: "", starts_at: "", ends_at: "", room: null, notes: null, class_name: "", mentor_name: "" };
   
-  const close = () => { setEditing(undefined); setMessage(undefined); };
-  const closePattern = () => { setPatternOpen(false); setPatternMessage(undefined); };
+  const close = () => { setEditing(undefined); setMessage(undefined); setDeleteOpen(false); };
+  const closePattern = () => { setPatternOpen(false); setPatternMessage(undefined); setPatternClassId(""); setPatternPackageId(""); setPatternMentorId(""); };
 
   const patternSlots = useMemo(() => buildPatternSlots(patternDraft), [patternDraft]);
+  const mentorNameById = useMemo(() => new Map(mentors.map((mentor) => [mentor.id, mentor.full_name])), [mentors]);
+  const manualClass = classes.find((item) => item.id === manualClassId);
+  const patternClass = classes.find((item) => item.id === patternClassId);
+  const manualPackages = manualClass?.packages ?? [];
+  const patternPackages = patternClass?.packages ?? [];
+  const manualMentorOptions = getClassMentorOptions(manualClass, mentorNameById);
+  const patternMentorOptions = getClassMentorOptions(patternClass, mentorNameById);
+
+  useEffect(() => {
+    const mentorIds = manualClass?.mentor_ids ?? [];
+    if (!manualClass) {
+      setManualMentorId("");
+      return;
+    }
+    if (!mentorIds.length) {
+      setManualMentorId("");
+      return;
+    }
+    if (!manualMentorId || !mentorIds.includes(manualMentorId)) {
+      setManualMentorId(mentorIds[0]);
+    }
+  }, [manualClass, manualMentorId]);
+
+  useEffect(() => {
+    const mentorIds = patternClass?.mentor_ids ?? [];
+    if (!patternClass) {
+      setPatternMentorId("");
+      return;
+    }
+    if (!mentorIds.length) {
+      setPatternMentorId("");
+      return;
+    }
+    if (!patternMentorId || !mentorIds.includes(patternMentorId)) {
+      setPatternMentorId(mentorIds[0]);
+    }
+  }, [patternClass, patternMentorId]);
   
   const submit = (form: HTMLFormElement) => startTransition(async () => { 
     const formData = new FormData(form);
+    if (!formData.get("mentor_id")) {
+      setMessage("Kelas ini belum memiliki mentor. Tambahkan mentor di menu Kelas dulu.");
+      return;
+    }
     
     // Konversi nilai datetime-local (yang tanpa zona waktu) ke format ISO penuh
     // agar Supabase menyimpan waktu lokal dengan benar (tidak menganggapnya UTC).
@@ -109,7 +190,12 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
   });
   
   const remove = () => { 
-    if (!editing || !window.confirm("Hapus jadwal ini?")) return; 
+    if (!editing) return;
+    setDeleteOpen(true);
+  };
+
+  const confirmRemove = () => {
+    if (!editing?.id) return;
     startTransition(async () => { 
       const result = await deleteSchedule(editing.id); 
       if (result.error) setMessage(result.error); else close(); 
@@ -118,6 +204,10 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
 
   const submitPattern = (form: HTMLFormElement) => startTransition(async () => {
     const formData = new FormData(form);
+    if (!formData.get("mentor_id")) {
+      setPatternMessage("Kelas ini belum memiliki mentor. Tambahkan mentor di menu Kelas dulu.");
+      return;
+    }
     const slots = buildPatternSlots(patternDraft);
     if (!slots.length) {
       setPatternMessage("Pilih periode, hari, dan jam yang benar.");
@@ -126,6 +216,7 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
 
     const result = await generateSchedules({
       class_id: formData.get("class_id"),
+      package_id: formData.get("package_id"),
       mentor_id: formData.get("mentor_id"),
       room: formData.get("room"),
       notes: formData.get("notes"),
@@ -140,7 +231,7 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
     setActiveView(arg.view.type);
   };
 
-  const changeView = (viewName: string) => {
+  const changeView = (viewName: "dayGridMonth" | "timeGridDay") => {
     if (calendarRef.current) calendarRef.current.getApi().changeView(viewName);
   };
 
@@ -156,103 +247,113 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
   };
 
   const renderEventContent = (eventInfo: any) => {
-    const { colors, schedule } = eventInfo.event.extendedProps;
+    const { colors, schedule, title } = eventInfo.event.extendedProps;
+    const detail = [schedule.mentor_name, schedule.package_name].filter((value) => value && value !== "-").join(" - ");
     return (
       <div 
-        className="relative w-full h-full rounded-xl px-2 py-1.5 overflow-hidden font-sans flex flex-col items-center justify-center text-center transition-transform hover:scale-[1.02]" 
+        className="schedule-event-pill group relative flex w-full items-center gap-1.5 overflow-hidden rounded-sm px-2 text-left transition hover:brightness-[0.98]" 
         style={{ backgroundColor: colors.bg }}
+        title={`${title}${detail ? ` - ${detail}` : ""} ${formatTime(schedule.starts_at)} - ${formatTime(schedule.ends_at)}`}
       >
-        {/* Indikator bar kecil di sebelah kanan sesuai referensi GSM */}
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 h-1/2 w-1 rounded-l-full" style={{ backgroundColor: colors.border }} />
-        
-        <p className="text-[11px] font-bold truncate w-full" style={{ color: colors.text }}>
-          {schedule.class_name}
-        </p>
-        <p className="text-[10px] truncate w-full font-medium mt-0.5" style={{ color: colors.text }}>
-          {schedule.mentor_name}
-        </p>
-        <p className="text-[9px] truncate w-full opacity-80 font-medium mt-0.5" style={{ color: colors.text }}>
-          {formatTime(schedule.starts_at)} - {formatTime(schedule.ends_at)}
-        </p>
+        <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: colors.border }} />
+        <span className="min-w-0">
+          <span className="block truncate text-[10px] font-semibold leading-tight" style={{ color: colors.text }}>
+            {title}
+          </span>
+        </span>
       </div>
     );
   };
 
   return (
     <>
-      <div className="mb-6 flex flex-col gap-5">
-        {/* View Segmented Control */}
-        <div className="flex bg-brand/5 p-1 rounded-xl w-max">
-          <button 
-            onClick={() => changeView("dayGridMonth")} 
-            className={`px-5 py-1.5 rounded-lg text-sm font-semibold transition ${activeView === "dayGridMonth" ? "bg-brand text-white" : "text-brand hover:bg-brand/10"}`}
-          >
-            Month
-          </button>
-          <button 
-            onClick={() => changeView("timeGridDay")} 
-            className={`px-5 py-1.5 rounded-lg text-sm font-semibold transition ${activeView === "timeGridDay" ? "bg-brand text-white" : "text-brand hover:bg-brand/10"}`}
-          >
-            Day
-          </button>
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-ink">Kalender Jadwal</h2>
+          <p className="mt-0.5 text-sm text-slate-500">Atur jadwal kelas, mentor, dan paket dalam satu tampilan.</p>
         </div>
-        
-        {/* Title, Nav, and Add Button */}
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-bold text-ink min-w-[200px]">{viewTitle}</h2>
-            <div className="flex items-center gap-1.5">
-              <button onClick={() => nav("prev")} className="w-8 h-8 flex items-center justify-center rounded-full bg-brand text-white hover:bg-brandHover transition">
-                <ChevronLeft size={20} strokeWidth={2.5}/>
-              </button>
-              <button onClick={() => nav("next")} className="w-8 h-8 flex items-center justify-center rounded-full bg-brand text-white hover:bg-brandHover transition">
-                <ChevronRight size={20} strokeWidth={2.5}/>
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setPatternOpen(true)}
-              className="flex items-center justify-center gap-2 rounded-xl border border-brand/20 bg-[#EEF0FF] px-5 py-2.5 text-sm font-bold text-brand transition hover:border-brand/30 hover:bg-[#E4E7FF]"
-            >
-              <CalendarPlus size={18} strokeWidth={2.5} /> Pola Mingguan
-            </button>
-            <button onClick={() => setEditing(null)} className="flex items-center justify-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-bold text-white hover:bg-brandHover transition">
-              <Plus size={18} strokeWidth={2.5}/> Tambah Manual
-            </button>
-          </div>
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+          <button
+            onClick={() => {
+              setPatternClassId(selectedClassId);
+              setPatternPackageId("");
+              setPatternOpen(true);
+            }}
+            className="flex items-center justify-center gap-2 rounded-xl border border-brand/20 bg-[#EEF0FF] px-4 py-2 text-sm font-bold text-brand transition hover:border-brand/30 hover:bg-[#E4E7FF]"
+          >
+            <CalendarPlus size={17} strokeWidth={2.5} /> Pola Mingguan
+          </button>
+          <button onClick={() => setEditing(selectedClassId ? { id: "", class_id: selectedClassId, package_id: "", mentor_id: "", starts_at: "", ends_at: "", room: null, notes: null, class_name: "", mentor_name: "" } : null)} className="flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-brandHover transition">
+            <Plus size={17} strokeWidth={2.5}/> Tambah Manual
+          </button>
         </div>
       </div>
 
-      <section className="rounded-2xl border border-slate-100 bg-white p-4 custom-calendar">
-        <FullCalendar 
-          ref={calendarRef}
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} 
-          initialView="dayGridMonth" 
-          headerToolbar={false}
-          locale="id" 
-          slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
-          firstDay={1} 
-          allDaySlot={false} 
-          slotMinTime="06:00:00" 
-          slotMaxTime="22:00:00" 
-          height="auto" 
-          events={events} 
-          eventContent={renderEventContent}
-          datesSet={handleDatesSet}
-          eventClick={(event: EventClickArg) => setEditing(event.event.extendedProps.schedule as Schedule)} 
-          select={(info: DateSelectArg) => setEditing({ id: "", class_id: "", mentor_id: "", starts_at: info.startStr, ends_at: info.endStr, room: null, notes: null, class_name: "", mentor_name: "" })} 
-          selectable
-        />
+      <section className={`shadcn-schedule-calendar ${activeView === "timeGridDay" ? "schedule-day-view" : "schedule-month-view"} rounded-2xl bg-white p-3 sm:p-4`}>
+        <div className="schedule-calendar-toolbar mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <button
+              type="button"
+              onClick={() => changeView("dayGridMonth")}
+              className={`rounded-md border px-3 py-2 text-sm font-medium transition ${activeView === "dayGridMonth" ? "border-brand bg-brand text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+            >
+              Bulan
+            </button>
+            <button
+              type="button"
+              onClick={() => changeView("timeGridDay")}
+              className={`rounded-md border px-3 py-2 text-sm font-medium transition ${activeView === "timeGridDay" ? "border-brand bg-brand text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+            >
+              Hari
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 sm:justify-end">
+            <button onClick={() => nav("prev")} className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Bulan sebelumnya">
+              <ChevronLeft size={16} strokeWidth={2.5}/>
+            </button>
+            <h2 className="min-w-0 flex-1 text-center text-base font-bold text-slate-800 sm:min-w-[170px] sm:flex-none sm:text-lg">{viewTitle}</h2>
+            <button onClick={() => nav("next")} className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Bulan berikutnya">
+              <ChevronRight size={16} strokeWidth={2.5}/>
+            </button>
+          </div>
+        </div>
+        <div className="schedule-calendar-scroll">
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView="dayGridMonth"
+            initialDate={initialCalendarDate}
+            headerToolbar={false}
+            locale="id"
+            slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+            firstDay={1}
+            allDaySlot={false}
+            slotMinTime="06:00:00"
+            slotMaxTime="22:00:00"
+            height="auto"
+            fixedWeekCount
+            dayMaxEvents={2}
+            moreLinkText={(count) => `+${count}`}
+            events={events}
+            eventContent={renderEventContent}
+            datesSet={handleDatesSet}
+            eventClick={(event: EventClickArg) => setEditing(event.event.extendedProps.schedule as Schedule)}
+            select={(info: DateSelectArg) => setEditing({ id: "", class_id: selectedClassId, package_id: "", mentor_id: "", starts_at: info.startStr, ends_at: info.endStr, room: null, notes: null, class_name: "", mentor_name: "" })}
+            selectable
+          />
+        </div>
       </section>
 
-      <section className="mt-5 overflow-hidden rounded-2xl border border-slate-100 bg-white">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <h3 className="text-sm font-bold text-ink">Daftar Jadwal</h3>
-          <p className="mt-1 text-xs text-slate-500">Detail siswa, mentor, paket bimbel, mapel, hari, jam, dan status.</p>
-        </div>
+      <div className="mt-5">
+        <DataTableShell
+          icon={CalendarDays}
+          title="Database Jadwal"
+          totalCount={visibleSchedules.length}
+          totalLabel="jadwal terdaftar"
+        >
         <div className="divide-y divide-slate-100 sm:hidden">
-          {schedules.map((schedule) => (
+          {visibleSchedules.map((schedule) => (
             <article key={schedule.id} className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -268,12 +369,19 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
               </div>
             </article>
           ))}
-          {schedules.length === 0 && <div className="px-5 py-12 text-center text-sm text-slate-500">Belum ada jadwal.</div>}
+          {visibleSchedules.length === 0 && (
+            <EmptyState
+              icon={CalendarDays}
+              title="Belum ada jadwal"
+              description="Tambah jadwal manual atau gunakan pola mingguan untuk mengatur sesi belajar."
+              action={{ label: "+ Tambah Jadwal", onClick: () => setEditing(null) }}
+            />
+          )}
         </div>
 
         <div className="hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[980px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <thead className="bg-slate-50/80 text-[13px] text-slate-500">
               <tr>
                 <th className="px-5 py-3 font-semibold">Nama Siswa</th>
                 <th className="px-5 py-3 font-semibold">Mentor</th>
@@ -285,7 +393,7 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {schedules.map((schedule) => (
+          {visibleSchedules.map((schedule) => (
                 <tr key={schedule.id} className="transition hover:bg-slate-50/70">
                   <td className="max-w-[240px] px-5 py-4 text-slate-600">{schedule.student_names?.length ? schedule.student_names.join(", ") : "-"}</td>
                   <td className="px-5 py-4 font-semibold text-ink">{schedule.mentor_name}</td>
@@ -296,13 +404,20 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
                   <td className="px-5 py-4"><span className="rounded-full bg-[#EEF0FF] px-2.5 py-1 text-xs font-bold text-brand">{schedule.status_label ?? "Terjadwal"}</span></td>
                 </tr>
               ))}
-              {schedules.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-slate-500">Belum ada jadwal.</td></tr>
+              {visibleSchedules.length === 0 && (
+                <EmptyStateRow
+                  colSpan={7}
+                  icon={CalendarDays}
+                  title="Belum ada jadwal"
+                  description="Tambah jadwal manual atau gunakan pola mingguan."
+                  action={{ label: "+ Tambah Jadwal", onClick: () => setEditing(null) }}
+                />
               )}
             </tbody>
           </table>
         </div>
-      </section>
+        </DataTableShell>
+      </div>
 
       {mounted && editing !== undefined && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-end bg-slate-900/40 sm:items-center sm:justify-center sm:p-6">
@@ -317,16 +432,37 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
             {message && <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{message}</p>}
             <div className="grid gap-4 sm:grid-cols-2">
               <Label text="Kelas">
-                <select name="class_id" required defaultValue={formSchedule.class_id} className="input">
-                  <option value="">Pilih kelas</option>
-                  {classes.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
-                </select>
+                <AppSelect
+                  name="class_id"
+                  required
+                  value={manualClassId}
+                  onChange={(value) => { setManualClassId(value); setManualPackageId(""); setManualMentorId(""); }}
+                  options={classes.map((item) => ({ value: item.id, label: item.name }))}
+                  placeholder="Pilih kelas"
+                  className="w-full"
+                />
               </Label>
               <Label text="Mentor">
-                <select name="mentor_id" required defaultValue={formSchedule.mentor_id} className="input">
-                  <option value="">Pilih mentor</option>
-                  {mentors.map(x => <option key={x.id} value={x.id}>{x.full_name}</option>)}
-                </select>
+                <AppSelect
+                  name="mentor_id"
+                  required
+                  value={manualMentorId}
+                  onChange={setManualMentorId}
+                  disabled={!manualMentorOptions.length}
+                  options={manualMentorOptions.map((mentor) => ({ value: mentor.id, label: mentor.name }))}
+                  placeholder={manualClass ? "Pilih mentor" : "Pilih kelas dulu"}
+                  className="w-full"
+                />
+              </Label>
+              <Label text="Paket">
+                <AppSelect
+                  name="package_id"
+                  value={manualPackageId}
+                  onChange={setManualPackageId}
+                  options={manualPackages.map((item) => ({ value: item.id, label: item.name }))}
+                  placeholder="Semua paket kelas"
+                  className="w-full"
+                />
               </Label>
               <Label text="Mulai">
                 <input name="starts_at" type="datetime-local" required defaultValue={localDateTime(formSchedule.starts_at)} className="input"/>
@@ -348,7 +484,7 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
                 </button>
               )}
               <button type="button" onClick={close} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
-              <button disabled={isPending} className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+              <button disabled={isPending || !manualMentorId} className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
                 {isPending ? "Menyimpan..." : "Simpan Jadwal"}
               </button>
             </div>
@@ -372,16 +508,37 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Label text="Kelas">
-                <select name="class_id" required className="input">
-                  <option value="">Pilih kelas</option>
-                  {classes.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
-                </select>
+                <AppSelect
+                  name="class_id"
+                  required
+                  value={patternClassId}
+                  onChange={(value) => { setPatternClassId(value); setPatternPackageId(""); setPatternMentorId(""); }}
+                  options={classes.map((item) => ({ value: item.id, label: item.name }))}
+                  placeholder="Pilih kelas"
+                  className="w-full"
+                />
               </Label>
               <Label text="Mentor">
-                <select name="mentor_id" required className="input">
-                  <option value="">Pilih mentor</option>
-                  {mentors.map(x => <option key={x.id} value={x.id}>{x.full_name}</option>)}
-                </select>
+                <AppSelect
+                  name="mentor_id"
+                  required
+                  value={patternMentorId}
+                  onChange={setPatternMentorId}
+                  disabled={!patternMentorOptions.length}
+                  options={patternMentorOptions.map((mentor) => ({ value: mentor.id, label: mentor.name }))}
+                  placeholder={patternClass ? "Pilih mentor" : "Pilih kelas dulu"}
+                  className="w-full"
+                />
+              </Label>
+              <Label text="Paket">
+                <AppSelect
+                  name="package_id"
+                  value={patternPackageId}
+                  onChange={setPatternPackageId}
+                  options={patternPackages.map((item) => ({ value: item.id, label: item.name }))}
+                  placeholder="Semua paket kelas"
+                  className="w-full"
+                />
               </Label>
 
               <Label text="Mulai Periode">
@@ -484,7 +641,7 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
 
             <div className="mt-7 flex justify-end gap-3">
               <button type="button" onClick={closePattern} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
-              <button disabled={isPending || patternSlots.length === 0 || patternSlots.length > 120} className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brandHover disabled:opacity-60">
+              <button disabled={isPending || !patternMentorId || patternSlots.length === 0 || patternSlots.length > 120} className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brandHover disabled:opacity-60">
                 {isPending ? "Membuat..." : "Generate Jadwal"}
               </button>
             </div>
@@ -492,6 +649,14 @@ export function ScheduleCalendar({ schedules, classes, mentors }: Props) {
         </div>,
         document.body
       )}
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Hapus Jadwal?"
+        description="Jadwal kelas ini akan dihapus dari kalender dan database jadwal."
+        isPending={isPending}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={confirmRemove}
+      />
     </>
   );
 }
@@ -507,6 +672,22 @@ function MobileInfo({ label, value }: { label: string; value: string }) {
       <span className="min-w-0 text-right font-medium text-slate-600">{value}</span>
     </div>
   );
+}
+
+function getClassMentorOptions(classOption: ClassOption | undefined, mentorNameById: Map<string, string>) {
+  return (classOption?.mentor_ids ?? []).map((id) => ({
+    id,
+    name: mentorNameById.get(id) ?? "Mentor kelas",
+  }));
+}
+
+function cleanLabel(value?: string | null) {
+  const text = value?.trim();
+  return text && text !== "-" ? text : "";
+}
+
+function scheduleTitle(schedule: Schedule) {
+  return cleanLabel(schedule.subject_name) || cleanLabel(schedule.class_name) || cleanLabel(schedule.package_name) || "Jadwal Kelas";
 }
 
 function localDateTime(value: string) { 

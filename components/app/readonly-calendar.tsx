@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export type ReadonlySchedule = {
@@ -20,95 +21,117 @@ export type ReadonlySchedule = {
 export function ReadonlyCalendar({ schedules }: { schedules: ReadonlySchedule[] }) {
   const calendarRef = useRef<FullCalendar>(null);
   const [viewTitle, setViewTitle] = useState("");
+  const [activeView, setActiveView] = useState("dayGridMonth");
 
   const getEventColorStyle = (class_name: string) => {
     const hash = class_name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const colors = [
-      { bg: "#FFE4E6", border: "#E11D48", text: "#E11D48" },
-      { bg: "#FEF3C7", border: "#D97706", text: "#D97706" },
-      { bg: "#E0F2FE", border: "#0284C7", text: "#0369A1" },
-      { bg: "#DBEAFE", border: "#2563EB", text: "#1D4ED8" },
-      { bg: "#D1FAE5", border: "#059669", text: "#059669" },
+      { bg: "#EEF6FF", border: "#2F80ED", text: "#1D4ED8" },
+      { bg: "#F2F7FF", border: "#38BDF8", text: "#0369A1" },
+      { bg: "#F4F2FF", border: "#8B5CF6", text: "#6D28D9" },
+      { bg: "#ECFDF5", border: "#10B981", text: "#047857" },
+      { bg: "#FFF7ED", border: "#FB923C", text: "#C2410C" },
     ];
     return colors[hash % colors.length];
   };
 
   const events = useMemo(() => schedules.map((x) => {
-    const colors = getEventColorStyle(x.class_name);
+    const title = scheduleTitle(x);
+    const colors = getEventColorStyle(title);
     return {
       id: x.id,
-      title: x.subject_name ?? x.class_name,
+      title,
       start: x.starts_at,
       end: x.ends_at,
-      extendedProps: { schedule: x, colors },
+      extendedProps: { schedule: x, colors, title },
     };
   }), [schedules]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1">
-            <button
-              onClick={() => calendarRef.current?.getApi().prev()}
-              className="rounded-lg p-1.5 text-slate-500 hover:bg-white hover:text-ink"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              onClick={() => calendarRef.current?.getApi().today()}
-              className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-ink"
-            >
-              Hari Ini
-            </button>
-            <button
-              onClick={() => calendarRef.current?.getApi().next()}
-              className="rounded-lg p-1.5 text-slate-500 hover:bg-white hover:text-ink"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-          <h2 className="min-w-[150px] text-lg font-bold text-ink">{viewTitle}</h2>
-        </div>
-
-        <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1">
+    <section className={`shadcn-schedule-calendar ${activeView === "timeGridDay" ? "schedule-day-view" : "schedule-month-view"} rounded-2xl bg-white p-3 sm:p-4`}>
+      <div className="schedule-calendar-toolbar mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <button
+            type="button"
             onClick={() => calendarRef.current?.getApi().changeView("dayGridMonth")}
-            className="rounded-lg bg-white px-4 py-1.5 text-sm font-medium text-brand transition-all"
+            className={`rounded-md border px-3 py-2 text-sm font-medium transition ${activeView === "dayGridMonth" ? "border-brand bg-brand text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
           >
             Bulan
+          </button>
+          <button
+            type="button"
+            onClick={() => calendarRef.current?.getApi().changeView("timeGridDay")}
+            className={`rounded-md border px-3 py-2 text-sm font-medium transition ${activeView === "timeGridDay" ? "border-brand bg-brand text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+          >
+            Hari
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 sm:justify-end">
+          <button
+            onClick={() => calendarRef.current?.getApi().prev()}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Sebelumnya"
+          >
+            <ChevronLeft size={16} strokeWidth={2.5} />
+          </button>
+          <h2 className="min-w-0 flex-1 text-center text-base font-bold text-slate-800 sm:min-w-[170px] sm:flex-none sm:text-lg">{viewTitle}</h2>
+          <button
+            onClick={() => calendarRef.current?.getApi().next()}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Berikutnya"
+          >
+            <ChevronRight size={16} strokeWidth={2.5} />
           </button>
         </div>
       </div>
 
-      <div className="calendar-container rounded-2xl border border-slate-100 bg-white p-6">
+      <div className="schedule-calendar-scroll">
         <FullCalendar
           ref={calendarRef}
-          plugins={[dayGridPlugin]}
+          plugins={[dayGridPlugin, timeGridPlugin]}
           initialView="dayGridMonth"
           headerToolbar={false}
-          dayMaxEvents={3}
+          dayMaxEvents={2}
           allDaySlot={false}
           slotMinTime="08:00:00"
           slotMaxTime="21:00:00"
+          fixedWeekCount
           events={events}
           height="auto"
-          datesSet={(arg) => setViewTitle(arg.view.title)}
+          datesSet={(arg) => {
+            setViewTitle(arg.view.title);
+            setActiveView(arg.view.type);
+          }}
           eventContent={(arg) => {
-            const { colors, schedule } = arg.event.extendedProps;
+            const { colors, schedule, title } = arg.event.extendedProps;
+            const detail = [schedule?.mentor_name, schedule?.package_name].filter((value) => value && value !== "-").join(" - ");
             return (
               <div
-                className="flex w-full flex-col overflow-hidden rounded-md px-2 py-1 text-xs leading-tight"
-                style={{ backgroundColor: colors.bg, borderLeft: `3px solid ${colors.border}`, color: colors.text }}
+                className="schedule-event-pill group relative flex w-full items-center gap-1.5 overflow-hidden rounded-sm px-2 text-left transition hover:brightness-[0.98]"
+                style={{ backgroundColor: colors.bg }}
+                title={`${title}${detail ? ` - ${detail}` : ""} ${arg.timeText}`}
               >
-                <span className="truncate font-bold">{arg.timeText}</span>
-                <span className="truncate font-medium">{arg.event.title}</span>
-                <span className="truncate text-[10px] opacity-80">{schedule.student_names?.length ? schedule.student_names.join(", ") : schedule.class_name}</span>
+                <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: colors.border }} />
+                <span className="min-w-0">
+                  <span className="block truncate text-[10px] font-semibold leading-tight" style={{ color: colors.text }}>
+                    {title}
+                  </span>
+                </span>
               </div>
             );
           }}
         />
       </div>
-    </div>
+    </section>
   );
+}
+
+function cleanLabel(value?: string | null) {
+  const text = value?.trim();
+  return text && text !== "-" ? text : "";
+}
+
+function scheduleTitle(schedule: ReadonlySchedule) {
+  return cleanLabel(schedule.subject_name) || cleanLabel(schedule.class_name) || cleanLabel(schedule.package_name) || "Jadwal Kelas";
 }

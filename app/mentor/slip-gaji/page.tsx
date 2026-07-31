@@ -14,7 +14,7 @@ export default async function MentorSlipGajiPage() {
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
   const incomeThisMonth = payrolls.filter((row) => row.month === currentMonth && row.year === currentYear).reduce((sum, row) => sum + row.total_amount, 0);
-  const latest = payrolls[0];
+  const latest = payrolls.find((row) => row.total_amount > 0);
 
   return (
     <AppShell role={user.role} email={user.email} name={user.name} title="Slip Gaji" activeNav="Slip Gaji">

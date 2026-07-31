@@ -9,8 +9,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Manajemen Bimbel",
-  description: "Aplikasi manajemen bimbingan belajar"
+  title: "Bimble Smart",
+  description: "Aplikasi manajemen Bimble Smart",
+  icons: {
+    icon: "/logo-bimbel.png",
+    shortcut: "/logo-bimbel.png",
+    apple: "/logo-bimbel.png",
+  },
 };
 
 export default function RootLayout({

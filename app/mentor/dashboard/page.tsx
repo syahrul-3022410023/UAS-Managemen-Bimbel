@@ -3,6 +3,8 @@ import { SummaryCard } from "@/components/app/summary-card";
 import { requireRole } from "@/lib/auth/session";
 import { getMentorMetrics } from "@/lib/dashboard/data";
 
+export const dynamic = "force-dynamic";
+
 export default async function MentorDashboardPage() {
   const user = await requireRole(["mentor"]);
   const metrics = await getMentorMetrics(user.id);

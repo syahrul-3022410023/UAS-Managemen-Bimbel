@@ -206,8 +206,10 @@ export function TopBar({ title, email, name, role, navigation }: TopBarProps) {
             {/* Drawer Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px", borderBottom: "1px solid #f1f5f9" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold" }}>B</div>
-                <span style={{ fontWeight: 700, fontSize: 20, color: "#16202A" }}>Manajemen Bimbel</span>
+                <div style={{ width: 36, height: 36, borderRadius: 12, overflow: "hidden", backgroundColor: "#ffffff", border: "1px solid #eef2f7" }}>
+                  <img src="/logo-bimbel.png" alt="Logo Bimble Smart" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: 20, color: "#16202A" }}>Bimble Smart</span>
               </div>
               <button
                 type="button"

@@ -7,6 +7,7 @@ export const metadata = {
   title: "Invoice SPP | BimbelPro",
   description: "Tagihan bimbel anak Anda",
 };
+export const dynamic = "force-dynamic";
 
 export default async function ParentInvoicePage() {
   const user = await requireRole(["parent"]);

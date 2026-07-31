@@ -126,6 +126,7 @@ export async function getLaporanAbsensi(
 export type LaporanPembayaranPoint = {
   bulan: string;
   pendapatan: number;
+  pengeluaran: number;
   jumlah_transaksi: number;
 };
 
@@ -161,8 +162,8 @@ export async function getLaporanPembayaran(tahun: number): Promise<LaporanPembay
       .gte("created_at", start.toISOString())
       .lt("created_at", end.toISOString()),
     supabase
-      .from("payrolls")
-      .select("total_amount")
+    .from("payrolls")
+      .select("total_amount, month")
       .eq("year", tahun),
     supabase
       .from("cash_flows")
@@ -176,8 +177,8 @@ export async function getLaporanPembayaran(tahun: number): Promise<LaporanPembay
     "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
   ];
 
-  const byMonth: Record<number, { pendapatan: number; jumlah: number }> = {};
-  for (let m = 1; m <= 12; m++) byMonth[m] = { pendapatan: 0, jumlah: 0 };
+  const byMonth: Record<number, { pendapatan: number; pengeluaran: number; jumlah: number }> = {};
+  for (let m = 1; m <= 12; m++) byMonth[m] = { pendapatan: 0, pengeluaran: 0, jumlah: 0 };
 
   for (const p of payments ?? []) {
     const m = new Date(p.paid_at).getMonth() + 1;
@@ -185,9 +186,21 @@ export async function getLaporanPembayaran(tahun: number): Promise<LaporanPembay
     byMonth[m].jumlah++;
   }
 
+  for (const flow of cashFlows ?? []) {
+    const m = new Date(flow.transaction_date).getMonth() + 1;
+    if (flow.type === "income") byMonth[m].pendapatan += Number(flow.amount);
+    if (flow.type === "expense") byMonth[m].pengeluaran += Number(flow.amount);
+  }
+
+  for (const payroll of payrolls ?? []) {
+    const month = Number(payroll.month);
+    if (byMonth[month]) byMonth[month].pengeluaran += Number(payroll.total_amount);
+  }
+
   const chart: LaporanPembayaranPoint[] = Object.entries(byMonth).map(([m, v]) => ({
     bulan: BULAN_NAMES[Number(m) - 1],
     pendapatan: v.pendapatan,
+    pengeluaran: v.pengeluaran,
     jumlah_transaksi: v.jumlah,
   }));
 

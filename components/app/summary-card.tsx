@@ -1,18 +1,21 @@
 import { BookOpen, CalendarCheck, CreditCard, FileText, Layers, Users } from "lucide-react";
+import { KpiCard } from "./kpi-card";
+import { SkeletonCard } from "./skeleton";
 
 type SummaryCardProps = {
   label: string;
   value: string;
   detail: string;
+  loading?: boolean;
 };
 
 const kpiStyles = [
-  { bg: "bg-blue-50", text: "text-brand", icon: BookOpen },
-  { bg: "bg-sky-50", text: "text-sky-600", icon: FileText },
-  { bg: "bg-cyan-50", text: "text-cyan-600", icon: CalendarCheck },
-  { bg: "bg-blue-50", text: "text-blue-600", icon: Users },
-  { bg: "bg-sky-50", text: "text-sky-600", icon: Layers },
-  { bg: "bg-blue-50", text: "text-brand", icon: CreditCard },
+  { tone: "neutral" as const, icon: BookOpen },
+  { tone: "expense" as const, icon: FileText },
+  { tone: "balance" as const, icon: CalendarCheck },
+  { tone: "payroll" as const, icon: Users },
+  { tone: "expense" as const, icon: Layers },
+  { tone: "income" as const, icon: CreditCard },
 ];
 
 function getKpiStyle(label: string) {
@@ -29,24 +32,9 @@ function getKpiStyle(label: string) {
   return kpiStyles[index];
 }
 
-export function SummaryCard({ label, value, detail }: SummaryCardProps) {
-  const style = getKpiStyle(label);
-  const Icon = style.icon;
+export function SummaryCard({ label, value, detail, loading }: SummaryCardProps) {
+  if (loading) return <SkeletonCard />;
 
-  return (
-    <section className="gsm-summary-card min-h-[124px] rounded-2xl border border-[#ECEEF5] bg-white p-4 transition duration-300 hover:-translate-y-0.5 hover:border-brand/20">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${style.bg} ${style.text}`}>
-            <Icon size={15} strokeWidth={2.2} />
-          </div>
-          <p className="truncate text-sm font-semibold text-ink">{label}</p>
-        </div>
-      </div>
-      <div className="mt-5">
-        <p className="text-[28px] font-semibold leading-none text-ink">{value}</p>
-        <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">{detail}</p>
-      </div>
-    </section>
-  );
+  const style = getKpiStyle(label);
+  return <KpiCard icon={style.icon} label={label} value={value} detail={detail} tone={style.tone} />;
 }

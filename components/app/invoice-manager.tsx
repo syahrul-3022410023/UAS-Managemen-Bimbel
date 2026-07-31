@@ -3,12 +3,17 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import {
-  Search, Plus, X, FileText, CheckCircle2,
-  AlertCircle, ChevronRight
+  Plus, X, FileText, CheckCircle2,
+  AlertCircle, Eye, RefreshCw, Trash2
 } from "lucide-react";
-import { generateInvoice } from "@/app/billing/actions";
+import { deleteInvoice, generateInvoice, generateMonthlyInvoices } from "@/app/billing/actions";
 import type { InvoiceRow, StudentOption } from "@/app/billing/page-data";
 import Link from "next/link";
+import { EmptyState, EmptyStateRow } from "./empty-state";
+import { DataTableShell } from "./data-table-shell";
+import { KpiCard } from "./kpi-card";
+import { ConfirmDialog } from "./confirm-dialog";
+import { AppSelect } from "./app-select";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,6 +63,7 @@ function GenerateForm({
   // Default due date: last day of selected month
   const [month, setMonth] = useState(currentMonth);
   const [year, setYear] = useState(currentYear);
+  const monthOptions = MONTHS.map((label, index) => ({ value: index + 1, label }));
 
   const defaultDueDate = (() => {
     const d = new Date(year, month, 0); // last day of month
@@ -117,17 +123,14 @@ function GenerateForm({
           {/* Siswa */}
           <label className="sm:col-span-2">
             <span className="mb-1.5 block text-sm font-medium text-slate-700">Siswa</span>
-            <select
+            <AppSelect
               name="student_id"
-              required
-              onChange={(e) => handleStudentChange(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/10"
-            >
-              <option value="">Pilih siswa</option>
-              {students.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
+              defaultValue=""
+              onChange={handleStudentChange}
+              options={students.map((student) => ({ value: student.value, label: student.label }))}
+              placeholder="Pilih siswa"
+              className="w-full"
+            />
           </label>
 
           {/* Paket info */}
@@ -150,14 +153,7 @@ function GenerateForm({
           {/* Bulan */}
           <label>
             <span className="mb-1.5 block text-sm font-medium text-slate-700">Bulan</span>
-            <select
-              name="month"
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/10"
-            >
-              {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-            </select>
+            <AppSelect name="month" value={month} onChange={(value) => setMonth(Number(value))} options={monthOptions} placeholder="" className="w-full" />
           </label>
 
           {/* Tahun */}
@@ -231,8 +227,14 @@ type Props = {
 export function InvoiceManager({ invoices, students }: Props) {
   const [query, setQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const now = new Date();
+  const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
+  const [filterYear, setFilterYear] = useState(now.getFullYear());
+  const [message, setMessage] = useState<string>();
   const [showGenerate, setShowGenerate] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const monthOptions = MONTHS.map((label, index) => ({ value: index + 1, label }));
 
   const filtered = useMemo(() => {
     return invoices.filter((inv) => {
@@ -240,17 +242,37 @@ export function InvoiceManager({ invoices, students }: Props) {
         inv.student_name.toLowerCase().includes(query.toLowerCase()) ||
         `${MONTHS[inv.month - 1]} ${inv.year}`.toLowerCase().includes(query.toLowerCase());
       const matchStatus = filterStatus === "all" || inv.status === filterStatus;
-      return matchQuery && matchStatus;
+      const matchPeriod = inv.month === filterMonth && inv.year === filterYear;
+      return matchQuery && matchStatus && matchPeriod;
     });
-  }, [invoices, query, filterStatus]);
+  }, [invoices, query, filterStatus, filterMonth, filterYear]);
 
   // Summary stats
   const stats = useMemo(() => ({
-    total: invoices.length,
-    unpaid: invoices.filter((i) => i.status === "unpaid").length,
-    paid: invoices.filter((i) => i.status === "paid").length,
-    revenue: invoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.total_paid, 0),
-  }), [invoices]);
+    total: filtered.length,
+    unpaid: filtered.filter((i) => i.status === "unpaid").length,
+    paid: filtered.filter((i) => i.status === "paid").length,
+    revenue: filtered.filter((i) => i.status === "paid").reduce((s, i) => s + i.total_paid, 0),
+  }), [filtered]);
+
+  const generateMonthly = () => startTransition(async () => {
+    const result = await generateMonthlyInvoices({ month: filterMonth, year: filterYear });
+    if (result.error) setMessage(result.error);
+    else setMessage(`Invoice bulanan berhasil dibuat untuk ${result.generated ?? 0} siswa.`);
+  });
+
+  const remove = (id: string) => {
+    setDeletingId(id);
+  };
+
+  const confirmRemove = () => {
+    if (!deletingId) return;
+    startTransition(async () => {
+      const result = await deleteInvoice(deletingId);
+      if (result.error) setMessage(result.error);
+      setDeletingId(null);
+    });
+  };
 
   return (
     <>
@@ -262,41 +284,48 @@ export function InvoiceManager({ invoices, students }: Props) {
             Kelola tagihan dan status pembayaran siswa bimbel.
           </p>
         </div>
-        <button
-          onClick={() => setShowGenerate(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brandHover"
-        >
-          <Plus size={17} />
-          Generate Invoice SPP
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={generateMonthly} disabled={isPending} className="inline-flex items-center gap-2 rounded-xl bg-[#EEF0FF] px-4 py-2.5 text-sm font-semibold text-brand transition hover:bg-[#E4E7FF] disabled:opacity-60">
+            <RefreshCw size={17} />
+            Generate Bulanan
+          </button>
+          <button
+            onClick={() => setShowGenerate(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brandHover"
+          >
+            <Plus size={17} />
+            Generate Per Siswa
+          </button>
+        </div>
       </div>
+
+      {message && <div className="mb-5 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm font-semibold text-slate-600">{message}</div>}
 
       {/* Stats */}
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Invoice", value: String(stats.total), detail: "Tagihan terdaftar", icon: FileText },
-          { label: "Belum Dibayar", value: String(stats.unpaid), detail: "Invoice menunggu bayar", icon: AlertCircle },
-          { label: "Lunas", value: String(stats.paid), detail: "Invoice selesai", icon: CheckCircle2 },
-          { label: "Terbayar", value: formatCurrency(stats.revenue), detail: "Pembayaran lunas diterima", icon: CheckCircle2 },
-        ].map((s) => {
-          const Icon = s.icon;
-          return (
-            <div key={s.label} className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-apple-soft">
-              <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-brand">
-                <Icon size={15} strokeWidth={2.2} />
-              </div>
-              <p className="text-sm font-semibold text-ink">{s.label}</p>
-              <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{s.value}</p>
-              <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">{s.detail}</p>
-            </div>
-          );
-        })}
+          { label: "Invoice", value: String(stats.total), detail: "Tagihan terdaftar", icon: FileText, tone: "payroll" as const },
+          { label: "Belum Dibayar", value: String(stats.unpaid), detail: "Invoice menunggu bayar", icon: AlertCircle, tone: "expense" as const },
+          { label: "Lunas", value: String(stats.paid), detail: "Invoice selesai", icon: CheckCircle2, tone: "balance" as const },
+          { label: "Terbayar", value: formatCurrency(stats.revenue), detail: "Pembayaran lunas diterima", icon: CheckCircle2, tone: "income" as const },
+        ].map((s) => (
+          <KpiCard key={s.label} icon={s.icon} label={s.label} value={s.value} detail={s.detail} tone={s.tone} />
+        ))}
       </div>
 
-      {/* Filter & Search */}
-      <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-apple-soft">
-        <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-2">
+      <DataTableShell
+        icon={FileText}
+        title="Database Invoice"
+        totalCount={invoices.length}
+        totalLabel="invoice terdaftar"
+        shownCount={filtered.length}
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchPlaceholder="Cari siswa atau bulan..."
+        controls={
+          <>
+            <AppSelect value={filterMonth} onChange={(value) => setFilterMonth(Number(value))} options={monthOptions} placeholder="" className="w-32" />
+            <input value={filterYear} onChange={(event) => setFilterYear(Number(event.target.value))} type="number" min={2020} max={2099} className="w-24 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 outline-none focus:border-brand" />
             {["all", "unpaid", "paid"].map((s) => (
               <button
                 key={s}
@@ -310,17 +339,9 @@ export function InvoiceManager({ invoices, students }: Props) {
                 {s === "all" ? "Semua" : statusConfig[s as keyof typeof statusConfig]?.label ?? s}
               </button>
             ))}
-          </div>
-          <label className="flex w-full max-w-xs items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-400 focus-within:border-brand/50 focus-within:bg-white">
-            <Search size={16} />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari siswa atau bulan..."
-              className="w-full bg-transparent text-sm text-ink outline-none"
-            />
-          </label>
-        </div>
+          </>
+        }
+      >
 
         <div className="divide-y divide-slate-100 sm:hidden">
           {filtered.map((inv) => {
@@ -348,7 +369,10 @@ export function InvoiceManager({ invoices, students }: Props) {
                   <span className="min-w-0 truncate">{inv.package_name ?? "-"}</span>
                   <span className="shrink-0">Tempo {new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(inv.due_date))}</span>
                 </div>
-                <div className="mt-4 flex justify-end">
+                <div className="mt-4 flex justify-end gap-2">
+                  <button onClick={() => remove(inv.id)} disabled={isPending} className="rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600 disabled:opacity-60">
+                    Hapus
+                  </button>
                   <Link href={`/admin/invoice/${inv.id}`} className="rounded-xl bg-[#EEF0FF] px-3 py-2 text-xs font-bold text-brand">
                     Detail
                   </Link>
@@ -357,16 +381,18 @@ export function InvoiceManager({ invoices, students }: Props) {
             );
           })}
           {filtered.length === 0 && (
-            <div className="px-5 py-12 text-center text-sm text-slate-500">
-              <FileText size={32} className="mx-auto mb-3 text-slate-300" />
-              Belum ada invoice yang cocok.
-            </div>
+            <EmptyState
+              icon={FileText}
+              title={query || filterStatus !== "all" ? "Tidak ada invoice yang cocok" : "Belum ada invoice"}
+              description={query || filterStatus !== "all" ? "Coba ubah filter atau kata kunci pencarian." : "Generate invoice SPP pertama untuk memulai penagihan."}
+              action={!query && filterStatus === "all" ? { label: "+ Generate Invoice", onClick: () => setShowGenerate(true) } : undefined}
+            />
           )}
         </div>
 
         <div className="hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[700px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <thead className="bg-slate-50/80 text-[13px] text-slate-500">
               <tr>
                 <th className="px-5 py-3 font-semibold">Siswa</th>
                 <th className="px-5 py-3 font-semibold">No. Invoice</th>
@@ -387,7 +413,7 @@ export function InvoiceManager({ invoices, students }: Props) {
                   <td className="px-5 py-4 text-slate-600">
                     {MONTHS[inv.month - 1]} {inv.year}
                   </td>
-                  <td className="px-5 py-4 text-slate-600">{inv.package_name ?? "—"}</td>
+                  <td className="px-5 py-4 text-slate-600">{inv.package_name ?? "-"}</td>
                   <td className="px-5 py-4 font-medium text-slate-800">
                     {formatCurrency(inv.amount)}
                   </td>
@@ -403,29 +429,39 @@ export function InvoiceManager({ invoices, students }: Props) {
                     <StatusBadge status={inv.status} />
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex justify-end">
+                    <div className="flex justify-end gap-1">
                       <Link
                         href={`/admin/invoice/${inv.id}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/10 transition"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-brand transition hover:bg-blue-100"
+                        aria-label="Detail invoice"
                       >
-                        Detail <ChevronRight size={14} />
+                        <Eye size={17} />
                       </Link>
+                      <button
+                        onClick={() => remove(inv.id)}
+                        disabled={isPending}
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                        aria-label="Hapus invoice"
+                      >
+                        <Trash2 size={17} />
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="px-5 py-12 text-center text-slate-500">
-                    <FileText size={32} className="mx-auto mb-3 text-slate-300" />
-                    Belum ada invoice yang cocok.
-                  </td>
-                </tr>
+                <EmptyStateRow
+                  colSpan={9}
+                  icon={FileText}
+                  title={query || filterStatus !== "all" ? "Tidak ada invoice yang cocok" : "Belum ada invoice"}
+                  description={query || filterStatus !== "all" ? "Coba ubah filter atau kata kunci pencarian." : "Generate invoice SPP pertama untuk memulai penagihan."}
+                  action={!query && filterStatus === "all" ? { label: "+ Generate Invoice", onClick: () => setShowGenerate(true) } : undefined}
+                />
               )}
             </tbody>
           </table>
         </div>
-      </section>
+      </DataTableShell>
 
       {/* Generate Modal */}
       {showGenerate && (
@@ -434,6 +470,14 @@ export function InvoiceManager({ invoices, students }: Props) {
           onClose={() => setShowGenerate(false)}
         />
       )}
+      <ConfirmDialog
+        open={deletingId !== null}
+        title="Hapus Invoice?"
+        description="Invoice dan seluruh riwayat pembayaran yang terhubung akan dihapus."
+        isPending={isPending}
+        onClose={() => setDeletingId(null)}
+        onConfirm={confirmRemove}
+      />
     </>
   );
 }

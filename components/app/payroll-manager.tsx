@@ -1,30 +1,66 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Banknote, Eye, FileText, Printer, RefreshCw } from "lucide-react";
-import { generateCurrentPayroll, markPayrollPaid, updatePayrollAdjustments } from "@/app/finance/actions";
+import { Banknote, CheckCircle2, Eye, FileText, Printer, RefreshCw, Save, Trash2 } from "lucide-react";
+import { deletePayroll, generateCurrentPayroll, markPayrollPaid, updatePayrollAdjustments } from "@/app/finance/actions";
 import type { PayrollRow } from "@/app/finance/page-data";
+import { DataTableShell } from "./data-table-shell";
+import { EmptyState, EmptyStateRow } from "./empty-state";
+import { KpiCard } from "./kpi-card";
+import { ConfirmDialog } from "./confirm-dialog";
+import { AppSelect } from "./app-select";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 const formatRp = (amount: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
 
 export function PayrollManager({ rows }: { rows: PayrollRow[] }) {
+  const [query, setQuery] = useState("");
+  const now = new Date();
+  const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
+  const [filterYear, setFilterYear] = useState(now.getFullYear());
   const [message, setMessage] = useState<string>();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const totalUnpaid = rows.filter((row) => row.status === "unpaid").reduce((sum, row) => sum + row.total_amount, 0);
-  const totalPaid = rows.filter((row) => row.status === "paid").reduce((sum, row) => sum + row.total_amount, 0);
+  const monthOptions = MONTHS.map((month, index) => ({ value: index + 1, label: month }));
+
+  const filteredRows = useMemo(() => {
+    const keyword = query.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (row.month !== filterMonth || row.year !== filterYear) return false;
+      if (!keyword) return true;
+      const period = `${MONTHS[row.month - 1]} ${row.year}`;
+      const status = row.status === "paid" ? "lunas terbayar" : "belum dibayar unpaid";
+      return [row.mentor_name, period, status].some((value) => value.toLowerCase().includes(keyword));
+    });
+  }, [filterMonth, filterYear, query, rows]);
+
+  const totalUnpaid = filteredRows.filter((row) => row.status === "unpaid").reduce((sum, row) => sum + row.total_amount, 0);
+  const totalPaid = filteredRows.filter((row) => row.status === "paid").reduce((sum, row) => sum + row.total_amount, 0);
 
   const generate = () => startTransition(async () => {
-    const result = await generateCurrentPayroll();
+    const result = await generateCurrentPayroll({ month: filterMonth, year: filterYear });
     if (result.error) setMessage(result.error);
     else setMessage(`Payroll berhasil digenerate untuk ${result.generated ?? 0} mentor.`);
   });
 
   const pay = (id: string) => startTransition(async () => {
     const result = await markPayrollPaid(id);
-    if (result.error) setMessage(result.error);
+    setMessage(result.error ?? "Payroll berhasil dibayar dan arus kas otomatis berkurang.");
   });
+
+  const remove = (id: string) => {
+    setDeletingId(id);
+  };
+
+  const confirmRemove = () => {
+    if (!deletingId) return;
+    startTransition(async () => {
+      const result = await deletePayroll(deletingId);
+      setMessage(result.error ?? "Payroll berhasil dihapus.");
+      setDeletingId(null);
+    });
+  };
 
   const saveAdjustment = (id: string, form: HTMLFormElement) => startTransition(async () => {
     const result = await updatePayrollAdjustments(id, Object.fromEntries(new FormData(form)));
@@ -39,21 +75,36 @@ export function PayrollManager({ rows }: { rows: PayrollRow[] }) {
           <p className="mt-1 text-sm text-slate-500">Generate payroll, atur bonus/potongan, bayar, dan cetak slip gaji mentor.</p>
         </div>
         <button onClick={generate} disabled={isPending} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brandHover disabled:opacity-60">
-          <RefreshCw size={17} /> Generate Payroll Bulan Ini
+          <RefreshCw size={17} /> Generate Payroll
         </button>
       </div>
 
       {message && <div className="rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm font-semibold text-slate-600">{message}</div>}
 
       <div className="grid gap-4 md:grid-cols-3">
-        <MiniFinanceCard label="Belum Dibayar" value={formatRp(totalUnpaid)} detail="Payroll menunggu pelunasan" icon={<Banknote size={15} strokeWidth={2.2} />} />
-        <MiniFinanceCard label="Terbayar" value={formatRp(totalPaid)} detail="Payroll berstatus lunas" icon={<FileText size={15} strokeWidth={2.2} />} />
-        <MiniFinanceCard label="Total Slip" value={String(rows.length)} detail="Slip payroll tersimpan" icon={<Printer size={15} strokeWidth={2.2} />} />
+        <MiniFinanceCard label="Belum Dibayar" value={formatRp(totalUnpaid)} detail="Payroll menunggu pelunasan" />
+        <MiniFinanceCard label="Terbayar" value={formatRp(totalPaid)} detail="Payroll berstatus lunas" />
+        <MiniFinanceCard label="Total Slip" value={String(rows.length)} detail="Slip payroll tersimpan" />
       </div>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white">
+      <DataTableShell
+        icon={Banknote}
+        title="Database Payroll"
+        totalCount={rows.length}
+        totalLabel="slip tersimpan"
+        shownCount={filteredRows.length}
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchPlaceholder="Cari mentor atau periode..."
+        controls={
+          <>
+            <AppSelect value={filterMonth} onChange={(value) => setFilterMonth(Number(value))} options={monthOptions} placeholder="" className="w-28" />
+            <input value={filterYear} onChange={(event) => setFilterYear(Number(event.target.value))} type="number" min={2020} max={2099} className="w-24 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 outline-none focus:border-brand" />
+          </>
+        }
+      >
         <div className="divide-y divide-slate-100 sm:hidden">
-          {rows.map((row) => (
+          {filteredRows.map((row) => (
             <article key={row.id} className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -82,67 +133,97 @@ export function PayrollManager({ rows }: { rows: PayrollRow[] }) {
               </form>
 
               <div className="mt-4 flex flex-wrap justify-end gap-2">
-                <button form={`payroll-mobile-${row.id}`} disabled={isPending} className="rounded-xl bg-[#EEF0FF] px-3 py-2 text-xs font-bold text-brand disabled:opacity-60">Simpan</button>
-                {row.status === "unpaid" && <button onClick={() => pay(row.id)} disabled={isPending} className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-600 disabled:opacity-60">Bayar</button>}
-                <Link href={`/admin/gaji-mentor/${row.id}`} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">Detail Slip</Link>
+                <button form={`payroll-mobile-${row.id}`} disabled={isPending} className="rounded-xl bg-[#EEF0FF] px-3 py-2 text-xs font-bold text-brand transition hover:bg-brand/10 disabled:opacity-60">Simpan</button>
+                {row.status === "unpaid" && <button onClick={() => pay(row.id)} disabled={isPending} className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-600 transition hover:bg-emerald-100 disabled:opacity-60">Bayar</button>}
+                <button onClick={() => remove(row.id)} disabled={isPending} className="rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-60">Hapus</button>
+                <Link href={`/admin/gaji-mentor/${row.id}`} className="inline-flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-brand transition hover:bg-blue-100">
+                  <Eye size={15} /> Detail
+                </Link>
               </div>
             </article>
           ))}
-          {rows.length === 0 && <div className="px-5 py-12 text-center text-sm text-slate-500">Belum ada payroll. Klik Generate Payroll Bulan Ini.</div>}
+          {filteredRows.length === 0 && (
+            <EmptyState
+              icon={Banknote}
+              title={query ? "Tidak ada payroll yang cocok" : "Belum ada payroll"}
+              description={query ? "Coba ubah kata kunci pencarian mentor atau periode." : "Generate payroll bulan ini untuk membuat slip gaji mentor."}
+            />
+          )}
         </div>
 
         <div className="hidden overflow-x-auto sm:block">
-          <table className="w-full min-w-[980px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          <table className="w-full min-w-[1080px] table-fixed text-left text-sm">
+            <thead className="bg-slate-50/80 text-[13px] text-slate-500">
               <tr>
-                <th className="px-5 py-3 font-semibold">Mentor</th>
-                <th className="px-5 py-3 font-semibold">Periode</th>
-                <th className="px-5 py-3 text-center font-semibold">Sesi</th>
-                <th className="px-5 py-3 font-semibold">Gaji Sesi</th>
-                <th className="px-5 py-3 font-semibold">Bonus</th>
-                <th className="px-5 py-3 font-semibold">Potongan</th>
-                <th className="px-5 py-3 font-semibold">Total</th>
-                <th className="px-5 py-3 font-semibold">Status</th>
-                <th className="px-5 py-3 text-right font-semibold">Aksi</th>
+                <th className="w-[160px] px-5 py-3 font-semibold">Mentor</th>
+                <th className="w-[105px] px-4 py-3 font-semibold">Periode</th>
+                <th className="w-[70px] px-4 py-3 text-center font-semibold">Sesi</th>
+                <th className="w-[125px] px-4 py-3 font-semibold">Gaji Sesi</th>
+                <th className="w-[125px] px-4 py-3 font-semibold">Bonus</th>
+                <th className="w-[125px] px-4 py-3 font-semibold">Potongan</th>
+                <th className="w-[130px] px-4 py-3 font-semibold">Total</th>
+                <th className="w-[135px] px-4 py-3 font-semibold">Status</th>
+                <th className="w-[160px] px-5 py-3 text-right font-semibold">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.map((row) => (
+              {filteredRows.map((row) => (
                 <tr key={row.id} className="align-top transition hover:bg-slate-50/70">
-                  <td className="px-5 py-4 font-semibold text-ink">{row.mentor_name}</td>
-                  <td className="px-5 py-4 text-slate-600">{MONTHS[row.month - 1]} {row.year}</td>
-                  <td className="px-5 py-4 text-center font-semibold text-ink">{row.session_count}</td>
-                  <td className="px-5 py-4 text-slate-600">{formatRp(row.session_amount)}</td>
-                  <td className="px-5 py-4">
-                    <form id={`payroll-${row.id}`} onSubmit={(event) => { event.preventDefault(); saveAdjustment(row.id, event.currentTarget); }} className="space-y-2">
-                      <input name="bonus" defaultValue={row.bonus} className="input h-9 w-28" />
+                  <td className="px-5 py-4 font-semibold text-ink">
+                    <span className="block truncate" title={row.mentor_name}>{row.mentor_name}</span>
+                  </td>
+                  <td className="px-4 py-4 text-slate-600">{MONTHS[row.month - 1]} {row.year}</td>
+                  <td className="px-4 py-4 text-center font-semibold text-ink">{row.session_count}</td>
+                  <td className="whitespace-nowrap px-4 py-4 text-slate-600">{formatRp(row.session_amount)}</td>
+                  <td className="px-4 py-4">
+                    <form id={`payroll-${row.id}`} onSubmit={(event) => { event.preventDefault(); saveAdjustment(row.id, event.currentTarget); }}>
+                      <input name="bonus" defaultValue={row.bonus} className="input h-9 w-24" />
                     </form>
                   </td>
-                  <td className="px-5 py-4"><input form={`payroll-${row.id}`} name="deduction" defaultValue={row.deduction} className="input h-9 w-28" /></td>
-                  <td className="px-5 py-4 font-bold text-ink">{formatRp(row.total_amount)}</td>
-                  <td className="px-5 py-4">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${row.status === "paid" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-700"}`}>
+                  <td className="px-4 py-4"><input form={`payroll-${row.id}`} name="deduction" defaultValue={row.deduction} className="input h-9 w-24" /></td>
+                  <td className="whitespace-nowrap px-4 py-4 font-bold text-ink">{formatRp(row.total_amount)}</td>
+                  <td className="px-4 py-4">
+                    <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ${row.status === "paid" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-700"}`}>
                       {row.status === "paid" ? "Lunas" : "Belum Dibayar"}
                     </span>
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex justify-end gap-1">
-                      <button form={`payroll-${row.id}`} disabled={isPending} className="rounded-lg px-3 py-2 text-xs font-bold text-brand hover:bg-brand/10">Simpan</button>
-                      {row.status === "unpaid" && <button onClick={() => pay(row.id)} disabled={isPending} className="rounded-lg px-3 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50">Bayar</button>}
-                      <Link href={`/admin/gaji-mentor/${row.id}`} className="rounded-lg p-2 text-slate-400 hover:bg-brand/10 hover:text-brand" aria-label="Detail slip"><Eye size={17} /></Link>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button form={`payroll-${row.id}`} disabled={isPending} title="Simpan" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF0FF] text-brand transition hover:bg-brand/10 disabled:opacity-60" aria-label="Simpan payroll">
+                        <Save size={15} />
+                      </button>
+                      {row.status === "unpaid" && (
+                        <button onClick={() => pay(row.id)} disabled={isPending} title="Bayar" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100 disabled:opacity-60" aria-label="Bayar payroll">
+                          <CheckCircle2 size={16} />
+                        </button>
+                      )}
+                      <Link href={`/admin/gaji-mentor/${row.id}`} title="Detail" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-brand transition hover:bg-blue-100" aria-label="Detail slip"><Eye size={16} /></Link>
+                      <button onClick={() => remove(row.id)} disabled={isPending} title="Hapus" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100 disabled:opacity-60" aria-label="Hapus slip"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="px-5 py-12 text-center text-slate-500">Belum ada payroll. Klik Generate Payroll Bulan Ini.</td>
-                </tr>
+              {filteredRows.length === 0 && (
+                <EmptyStateRow
+                  colSpan={9}
+                  icon={Banknote}
+                  title={query ? "Tidak ada payroll yang cocok" : "Belum ada payroll"}
+                  description={query ? "Coba ubah kata kunci pencarian mentor atau periode." : "Generate payroll bulan ini untuk membuat slip gaji mentor."}
+                  action={!query ? { label: "+ Generate Payroll", onClick: generate } : undefined}
+                />
               )}
             </tbody>
           </table>
         </div>
-      </section>
+      </DataTableShell>
+      <ConfirmDialog
+        open={deletingId !== null}
+        title="Hapus Slip Payroll?"
+        description="Slip payroll akan dihapus. Jika statusnya sudah dibayar, transaksi arus kas terkait juga ikut dihapus."
+        isPending={isPending}
+        onClose={() => setDeletingId(null)}
+        onConfirm={confirmRemove}
+      />
     </div>
   );
 }
@@ -156,13 +237,8 @@ function MobileMetric({ label, value, strong }: { label: string; value: string; 
   );
 }
 
-function MiniFinanceCard({ label, value, detail, icon }: { label: string; value: string; detail: string; icon: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4">
-      <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-brand">{icon}</div>
-      <p className="text-sm font-semibold text-ink">{label}</p>
-      <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{value}</p>
-      <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">{detail}</p>
-    </div>
-  );
+function MiniFinanceCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+  const cardIcon = label.includes("Terbayar") ? FileText : label.includes("Total") ? Printer : Banknote;
+  const tone = label.includes("Terbayar") ? "income" : label.includes("Total") ? "payroll" : "expense";
+  return <KpiCard icon={cardIcon} label={label} value={value} detail={detail} tone={tone} />;
 }

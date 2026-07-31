@@ -1,8 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, FileText, CheckCircle2, AlertCircle, ChevronRight } from "lucide-react";
+import { FileText, CheckCircle2, AlertCircle } from "lucide-react";
 import type { InvoiceRow } from "@/app/billing/page-data";
+import { DataTableShell } from "./data-table-shell";
+import { EmptyStateRow } from "./empty-state";
+import { KpiCard } from "./kpi-card";
 
 const MONTHS = [
   "Januari","Februari","Maret","April","Mei","Juni",
@@ -60,46 +63,21 @@ export function ParentInvoiceView({ invoices }: { invoices: InvoiceRow[] }) {
 
       {/* Stats */}
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-apple-soft">
-          <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-brand">
-            <FileText size={15} strokeWidth={2.2} />
-          </div>
-          <p className="text-sm font-semibold text-ink">Invoice</p>
-          <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{invoices.length}</p>
-          <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Tagihan terdaftar</p>
-        </div>
-        <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-apple-soft">
-          <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
-            <CheckCircle2 size={15} strokeWidth={2.2} />
-          </div>
-          <p className="text-sm font-semibold text-ink">Terbayar</p>
-          <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{formatCurrency(stats.paid)}</p>
-          <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Pembayaran diterima</p>
-        </div>
-        <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4">
-          <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
-            <AlertCircle size={15} strokeWidth={2.2} />
-          </div>
-          <p className="text-sm font-semibold text-ink">Sisa Tagihan</p>
-          <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{formatCurrency(stats.unpaid)}</p>
-          <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Belum dibayar</p>
-        </div>
+        <KpiCard icon={FileText} label="Invoice" value={String(invoices.length)} detail="Tagihan terdaftar" tone="payroll" />
+        <KpiCard icon={CheckCircle2} label="Terbayar" value={formatCurrency(stats.paid)} detail="Pembayaran diterima" tone="income" />
+        <KpiCard icon={AlertCircle} label="Sisa Tagihan" value={formatCurrency(stats.unpaid)} detail="Belum dibayar" tone="expense" />
       </div>
 
-      {/* Table */}
-      <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-apple-soft">
-        <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm font-semibold text-ink">{invoices.length} invoice</p>
-          <label className="flex w-full max-w-xs items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-400 focus-within:border-brand/50 focus-within:bg-white">
-            <Search size={16} />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari invoice..."
-              className="w-full bg-transparent text-sm text-ink outline-none"
-            />
-          </label>
-        </div>
+      <DataTableShell
+        icon={FileText}
+        title="Database Invoice"
+        totalCount={invoices.length}
+        totalLabel="invoice terdaftar"
+        shownCount={filtered.length}
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchPlaceholder="Cari invoice..."
+      >
 
         {/* Mobile card view */}
         <div className="block sm:hidden divide-y divide-slate-100">
@@ -143,7 +121,7 @@ export function ParentInvoiceView({ invoices }: { invoices: InvoiceRow[] }) {
         {/* Desktop table */}
         <div className="hidden sm:block overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <thead className="bg-slate-50/80 text-[13px] text-slate-500">
               <tr>
                 <th className="px-5 py-3 font-semibold">Siswa</th>
                 <th className="px-5 py-3 font-semibold">No. Invoice</th>
@@ -181,17 +159,17 @@ export function ParentInvoiceView({ invoices }: { invoices: InvoiceRow[] }) {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-slate-500">
-                    <FileText size={32} className="mx-auto mb-3 text-slate-300" />
-                    Belum ada invoice.
-                  </td>
-                </tr>
+                <EmptyStateRow
+                  colSpan={8}
+                  icon={FileText}
+                  title="Belum ada invoice"
+                  description="Invoice anak akan muncul setelah admin membuat tagihan."
+                />
               )}
             </tbody>
           </table>
         </div>
-      </section>
+      </DataTableShell>
     </>
   );
 }

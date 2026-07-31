@@ -18,11 +18,10 @@ export default async function PackagesPage() {
         fields={[
           { key: "name", label: "Nama Paket Bimbel" },
           { key: "level", label: "Level" },
-          { key: "subject_name", label: "Mata Pelajaran", table: true, form: false },
-          { key: "subject_id", label: "Mata Pelajaran (kosong = semua mapel)", type: "select", options: options.subjects, table: false },
+          { key: "class_names", label: "Kelas dalam Paket", table: true, form: false },
+          { key: "class_ids", label: "Kelas yang masuk paket", type: "multiselect", options: options.classes, table: false },
           { key: "sessions_per_month", label: "Sesi/bulan", type: "number" },
           { key: "price", label: "Harga Paket/Bulan", type: "text" },
-          { key: "mentor_fee_per_session", label: "Gaji Mentor/Sesi", type: "text" },
           { key: "status_label", label: "Status", table: true, form: false },
           { key: "status", label: "Status", type: "select", options: [{ value: "active", label: "Aktif" }, { value: "inactive", label: "Nonaktif" }], table: false },
           { key: "duration_months", label: "Durasi langganan (bulan)", type: "number", table: false },

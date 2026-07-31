@@ -1,16 +1,22 @@
 import { AppShell } from "@/components/app/app-shell";
-import { SummaryCard } from "@/components/app/summary-card";
 import { requireRole } from "@/lib/auth/session";
 import { getAdminMetrics } from "@/lib/dashboard/data";
 import Link from "next/link";
 import {
   AlertCircle,
   ArrowUpRight,
+  Banknote,
   CalendarDays,
+  CircleDollarSign,
+  History,
   Layers,
   ReceiptText,
   TrendingUp,
+  WalletCards,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { DashboardFinanceOverview, DashboardStudentClassChart } from "@/components/app/dashboard-charts";
+import { KpiCard } from "@/components/app/kpi-card";
 
 export const metadata = {
   title: "Dashboard Admin | BimbelPro",
@@ -26,14 +32,12 @@ export default async function AdminDashboardPage() {
       currency: "IDR",
       maximumFractionDigits: 0,
     }).format(amount);
-
-  const operations = [
-    { label: "Siswa", value: metrics.students, detail: "Data siswa aktif", color: "from-[#2563EB] to-[#06B6D4]" },
-    { label: "Mentor", value: metrics.mentors, detail: "Pengajar terdaftar", color: "from-[#10B981] to-[#34D399]" },
-    { label: "Kelas", value: metrics.classes, detail: "Kelas berjalan", color: "from-[#0284C7] to-[#38BDF8]" },
-    { label: "Absensi", value: metrics.attendance, detail: "Record presensi", color: "from-[#0EA5E9] to-[#38BDF8]" },
-  ];
-  const maxOperation = Math.max(...operations.map((item) => item.value), 1);
+  const formatDate = (date: string) =>
+    new Intl.DateTimeFormat("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(new Date(date));
 
   const quickActions = [
     {
@@ -48,231 +52,219 @@ export default async function AdminDashboardPage() {
       detail: "Pantau pembayaran masuk dan arus kas",
       href: "/admin/laporan",
       icon: TrendingUp,
-      tone: "bg-emerald-50 text-emerald-600",
+      tone: "bg-[#EAF9FF] text-[#0891B2]",
     },
     {
       title: "Kelola Jadwal",
       detail: "Atur sesi belajar dan mentor",
       href: "/admin/jadwal",
       icon: CalendarDays,
-      tone: "bg-sky-50 text-sky-600",
+      tone: "bg-[#EAF4FF] text-[#1688F0]",
     },
     {
       title: "Manajemen Kelas",
       detail: "Susun kelas, siswa, dan mentor",
       href: "/admin/kelas",
       icon: Layers,
-      tone: "bg-sky-50 text-sky-600",
+      tone: "bg-[#EEF2FF] text-[#4F63F6]",
     },
   ];
 
   return (
-    <AppShell role={user.role} email={user.email} name={user.name} title="Dashboard Admin">
-      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Overview</p>
-          <h1 className="mt-1 text-2xl font-bold text-ink">Dashboard Admin</h1>
-          <p className="mt-1 text-sm text-slate-500">Ringkasan operasional bimbel hari ini.</p>
+    <AppShell role={user.role} email={user.email} name={user.name} title="Dashboard Admin" activeNav="Dashboard">
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="app-title-primary">Dashboard Admin</h1>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/laporan"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#F4F7FB] px-4 py-2.5 text-xs font-medium text-slate-700 transition hover:bg-[#EEF2FF] hover:text-brand"
+            >
+              Laporan <ArrowUpRight size={14} />
+            </Link>
+            <Link
+              href="/admin/jadwal"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-xs font-medium text-white transition hover:bg-brandHover"
+            >
+              Jadwal <CalendarDays size={14} />
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/admin/laporan"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition hover:border-brand/30 hover:text-brand"
-          >
-            Laporan <ArrowUpRight size={14} />
-          </Link>
-          <Link
-            href="/admin/jadwal"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-brandHover"
-          >
-            Jadwal <CalendarDays size={14} />
-          </Link>
-        </div>
-      </div>
 
-      {metrics.unpaidInvoices > 0 && (
-        <Link
-          href="/admin/invoice"
-          className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 transition hover:bg-red-100"
-        >
-          <span className="inline-flex items-center gap-2">
-            <AlertCircle size={18} className="shrink-0" />
-            <span>
-              <strong>{metrics.unpaidInvoices} invoice</strong> belum lunas.
-            </span>
-          </span>
-          <span className="text-xs font-bold">Lihat</span>
-        </Link>
-      )}
-
-      <div className="grid w-full gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          label="Penerimaan"
-          value={formatCurrency(metrics.totalCashIn)}
-          detail={`SPP ${formatCurrency(metrics.paymentIncome)} + kas manual ${formatCurrency(metrics.cashIncome)}`}
-        />
-        <SummaryCard
-          label="Pengeluaran"
-          value={formatCurrency(metrics.totalCashOut)}
-          detail={`Payroll ${formatCurrency(metrics.paidPayrollExpense)} + kas manual ${formatCurrency(metrics.cashExpense)}`}
-        />
-        <SummaryCard
-          label="Saldo Bersih"
-          value={formatCurrency(metrics.cashBalance)}
-          detail="Penerimaan - pengeluaran"
-        />
-        <SummaryCard
-          label="Payroll Bulan Ini"
-          value={formatCurrency(metrics.payrollThisMonth)}
-          detail="Total payroll periode ini"
-        />
-      </div>
-
-      <div className="mt-4 grid w-full items-stretch gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.85fr)]">
-        <section className="h-full rounded-2xl border border-slate-100 bg-white p-4 sm:p-5">
-          <div className="mb-5 flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-base font-bold text-ink">Aktivitas Operasional</h2>
-              <p className="mt-1 text-xs text-slate-500">Perbandingan data inti bimbel.</p>
-            </div>
-            <span className="rounded-lg border border-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-500">
-              Real-time
-            </span>
+        <section className="rounded-[20px] bg-white p-4 sm:p-5">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">Ringkasan Dashboard</h2>
+            <p className="mt-1 text-sm text-slate-500">Ringkasan operasional dan keuangan bimbel hari ini.</p>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px]">
-            <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-gradient-to-b from-slate-50/70 to-white p-4">
-              <div className="pointer-events-none absolute inset-x-5 top-9 bottom-14 flex flex-col justify-between">
-                {[0, 1, 2, 3].map((line) => (
-                  <span key={line} className="border-t border-dashed border-slate-200/80" />
-                ))}
+          <div className="mt-4 grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricCard
+              icon={CircleDollarSign}
+              label="Penerimaan"
+              value={formatCurrency(metrics.totalCashIn)}
+              detail={`SPP ${formatCurrency(metrics.paymentIncome)} + kas manual ${formatCurrency(metrics.cashIncome)}`}
+              tone="income"
+            />
+            <MetricCard
+              icon={ReceiptText}
+              label="Pengeluaran"
+              value={formatCurrency(metrics.totalCashOut)}
+              detail={`Payroll ${formatCurrency(metrics.paidPayrollExpense)} + kas manual ${formatCurrency(metrics.cashExpense)}`}
+              tone="expense"
+            />
+            <MetricCard
+              icon={Banknote}
+              label="Saldo Bersih"
+              value={formatCurrency(metrics.cashBalance)}
+              detail="Penerimaan - pengeluaran"
+              tone="balance"
+            />
+            <MetricCard
+              icon={WalletCards}
+              label="Payroll Bulan Ini"
+              value={formatCurrency(metrics.payrollThisMonth)}
+              detail="Total payroll periode ini"
+              tone="payroll"
+            />
+          </div>
+        </section>
+
+        {metrics.unpaidInvoices > 0 && (
+          <Link
+            href="/admin/invoice"
+            className="mb-5 flex items-center justify-between gap-3 rounded-2xl bg-[#EEF2FF] px-4 py-3 text-sm text-[#4F63F6] transition hover:bg-[#E7ECFF]"
+          >
+            <span className="inline-flex items-center gap-2">
+              <AlertCircle size={18} className="shrink-0" />
+              <span>
+                <strong>{metrics.unpaidInvoices} invoice</strong> belum lunas.
+              </span>
+            </span>
+            <span className="text-xs font-bold">Lihat</span>
+          </Link>
+        )}
+
+        <div className="grid w-full items-stretch gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.75fr)]">
+          <section className="flex min-h-[420px] flex-col overflow-hidden rounded-[20px] bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.035)] sm:p-6">
+            <DashboardFinanceOverview data={metrics.financeTrend} height={270} />
+          </section>
+
+          <section className="flex min-h-[420px] flex-col rounded-[20px] bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.035)] sm:p-6">
+            <div className="mb-1 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-base font-semibold tracking-normal text-ink">Siswa & Kelas</h2>
+                <p className="mt-1 text-xs text-slate-500">Ringkasan operasional aktif</p>
               </div>
-              <div className="relative flex h-56 items-end justify-around gap-3 pb-7 pt-7">
-                {operations.map((item) => {
-                  const height = Math.max(14, Math.round((item.value / maxOperation) * 100));
-                  return (
-                    <div key={item.label} className="group flex min-w-0 flex-1 flex-col items-center">
-                      <div className="mb-2 rounded-full border border-slate-100 bg-white px-2.5 py-1 text-xs font-bold text-ink opacity-0 transition group-hover:opacity-100">
-                        {item.value}
+            </div>
+
+            <div className="flex flex-1 items-center justify-center">
+              <DashboardStudentClassChart
+                height={270}
+                data={[
+                  { name: "Siswa", value: metrics.students, color: "#1688F0" },
+                  { name: "Kelas", value: metrics.classes, color: "#4F63F6" },
+                ]}
+              />
+            </div>
+          </section>
+        </div>
+
+        <div className="grid w-full items-stretch gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="flex min-h-[320px] flex-col rounded-[20px] bg-white p-4 sm:p-5 xl:h-[420px]">
+            <div className="shrink-0 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-medium uppercase text-slate-400">Aktivitas</p>
+                <h2 className="mt-1 text-lg font-semibold text-ink">Riwayat Aktivitas</h2>
+                <p className="mt-1 text-xs text-slate-500">Aktivitas keuangan terbaru yang sudah tercatat.</p>
+              </div>
+              <span className="rounded-full bg-[#F4F7FB] px-2.5 py-1 text-xs font-medium text-slate-500">
+                {metrics.financeActivities.length} terbaru
+              </span>
+            </div>
+
+            {metrics.financeActivities.length > 0 ? (
+              <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+                <div className="space-y-2.5">
+                  {metrics.financeActivities.map((activity) => (
+                    <div key={activity.id} className="flex min-h-[82px] items-center gap-3 rounded-2xl bg-[#F8FAFE] px-4 py-3">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${activity.type === "income" ? "bg-[#EAFBF4] text-[#0F9F6E]" : "bg-[#EEF2FF] text-[#4F63F6]"}`}>
+                        {activity.type === "income" ? <TrendingUp size={18} /> : <ReceiptText size={18} />}
                       </div>
-                      <div className="flex h-36 w-full max-w-[50px] items-end rounded-[18px] border border-slate-100 bg-white p-1.5">
-                        <div
-                          className={`w-full rounded-[14px] bg-gradient-to-t ${item.color} transition-all duration-500 group-hover:brightness-105`}
-                          style={{ height: `${height}%` }}
-                        />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-ink">{activity.title}</p>
+                            <p className="mt-0.5 truncate text-xs text-slate-500">{activity.detail}</p>
+                          </div>
+                          <p className={`shrink-0 text-sm font-semibold ${activity.type === "income" ? "text-[#0F9F6E]" : "text-[#4F63F6]"}`}>
+                            {activity.type === "income" ? "+" : "-"}{formatCurrency(activity.amount)}
+                          </p>
+                        </div>
+                        <p className="mt-1 text-[11px] font-medium text-slate-400">{formatDate(activity.date)}</p>
                       </div>
-                      <p className="mt-3 text-xs font-semibold text-slate-500">{item.label}</p>
                     </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-[#F8FAFE] px-6 py-10 text-center">
+                <div>
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-300 ring-1 ring-slate-100">
+                    <History size={22} />
+                  </div>
+                  <p className="mt-4 text-sm font-semibold text-ink">Belum ada riwayat aktivitas</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                    Aktivitas akan muncul setelah pembayaran, kas, atau payroll dicatat.
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
+
+          <aside className="grid min-h-[320px] gap-4 xl:h-[420px]">
+            <section className="flex h-full flex-col rounded-[20px] bg-white">
+              <div className="shrink-0 px-5 py-4">
+                <h2 className="text-base font-semibold text-ink">Workflow Cepat</h2>
+                <p className="mt-1 text-xs text-slate-500">Akses modul operasional yang paling sering dipakai.</p>
+              </div>
+              <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-2">
+                {quickActions.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link key={item.href} href={item.href} className="flex items-center gap-4 rounded-2xl px-3 py-3 transition hover:bg-[#F8FAFE]">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${item.tone}`}>
+                        <Icon size={18} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-slate-800">{item.title}</p>
+                        <p className="mt-0.5 text-sm text-slate-500">{item.detail}</p>
+                      </div>
+                      <ArrowUpRight size={16} className="text-slate-300" />
+                    </Link>
                   );
                 })}
               </div>
-            </div>
+            </section>
+          </aside>
+        </div>
 
-            <div className="grid content-start gap-2">
-              {operations.map((item) => {
-                const width = Math.max(8, Math.round((item.value / maxOperation) * 100));
-                return (
-                  <div key={item.label} className="rounded-2xl border border-slate-100 bg-slate-50/70 px-3 py-2.5">
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-bold text-ink">{item.label}</p>
-                        <p className="text-[11px] text-slate-400">{item.detail}</p>
-                      </div>
-                      <span className="text-sm font-bold text-ink">{item.value}</span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-white">
-                      <div className={`h-full rounded-full bg-gradient-to-r ${item.color}`} style={{ width: `${width}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
-            <MiniStat label="Invoice perlu tindakan" value={String(metrics.unpaidInvoices)} />
-            <MiniStat label="Pendapatan bulan ini" value={formatCurrency(metrics.revenueThisMonth)} />
-            <MiniStat label="Saldo operasional" value={formatCurrency(metrics.cashBalance)} />
-          </div>
-        </section>
-
-        <section className="flex h-full flex-col rounded-2xl border border-slate-100 bg-white p-4 sm:p-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-medium text-slate-400">Pendapatan Bulan Ini</p>
-              <h2 className="mt-2 text-3xl font-bold text-ink">{formatCurrency(metrics.revenueThisMonth)}</h2>
-              <p className="mt-1 text-xs font-semibold text-emerald-600">Total pembayaran diterima</p>
-            </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EEF0FF] text-brand">
-              <TrendingUp size={18} />
-            </div>
-          </div>
-
-          <svg className="mt-7 h-40 w-full overflow-visible rounded-3xl bg-gradient-to-b from-slate-50/80 to-white p-3" viewBox="0 0 280 130" fill="none" aria-hidden="true">
-            <path d="M10 96 C36 72 52 80 72 58 C96 31 118 46 142 40 C170 32 186 16 214 34 C240 51 254 30 270 22" stroke="#2563EB" strokeWidth="4" strokeLinecap="round" />
-            <path d="M10 96 C36 72 52 80 72 58 C96 31 118 46 142 40 C170 32 186 16 214 34 C240 51 254 30 270 22 V120 H10 Z" fill="url(#revenueFill)" />
-            <circle cx="270" cy="22" r="5" fill="#2563EB" stroke="white" strokeWidth="4" />
-            <defs>
-              <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="110">
-                <stop stopColor="#2563EB" stopOpacity="0.18" />
-                <stop offset="1" stopColor="#2563EB" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-          </svg>
-
-          <div className="mt-auto rounded-2xl bg-slate-50 p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-ink">Status Invoice</p>
-              <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${metrics.unpaidInvoices > 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"}`}>
-                {metrics.unpaidInvoices > 0 ? "Perlu follow-up" : "Terkendali"}
-              </span>
-            </div>
-            <p className="mt-2 text-xs text-slate-500">
-              {metrics.unpaidInvoices > 0
-                ? `${metrics.unpaidInvoices} invoice SPP belum lunas.`
-                : "Tidak ada invoice tertunggak saat ini."}
-            </p>
-          </div>
-        </section>
       </div>
-
-      <section className="mt-5 rounded-2xl border border-slate-100 bg-white">
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <div>
-            <h2 className="text-base font-bold text-ink">Workflow Cepat</h2>
-            <p className="mt-1 text-xs text-slate-500">Akses modul operasional yang paling sering dipakai.</p>
-          </div>
-          <Link href="/admin/laporan" className="text-xs font-bold text-brand hover:underline">
-            Laporan
-          </Link>
-        </div>
-        <div className="divide-y divide-slate-100">
-          {quickActions.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link key={item.href} href={item.href} className="flex items-center gap-4 px-5 py-4 transition hover:bg-slate-50">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${item.tone}`}>
-                  <Icon size={18} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-slate-800">{item.title}</p>
-                  <p className="mt-0.5 text-sm text-slate-500">{item.detail}</p>
-                </div>
-                <ArrowUpRight size={16} className="text-slate-300" />
-              </Link>
-            );
-          })}
-        </div>
-      </section>
     </AppShell>
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-slate-50 px-4 py-3">
-      <p className="text-[11px] font-medium text-slate-400">{label}</p>
-      <p className="mt-1 truncate text-sm font-bold text-ink">{value}</p>
-    </div>
-  );
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  detail: string;
+  tone: "income" | "expense" | "balance" | "payroll";
+}) {
+  return <KpiCard icon={Icon} label={label} value={value} detail={detail} tone={tone} />;
 }

@@ -11,21 +11,21 @@ type AuthCardProps = {
 export function AuthCard({ title, description, children, footer }: AuthCardProps) {
   return (
     <main className="auth-main flex min-h-screen items-center justify-center bg-[#F2F2F3] p-4 md:p-6 lg:p-8">
-      {/* Container Card - Designed to fill the desktop screen elegantly (h-[85vh]) but keep clean margins */}
+      {/* Container Card */}
       <section className="auth-card relative flex flex-col md:flex-row w-full max-w-6xl items-stretch rounded-3xl md:rounded-[2rem] border border-[#ECEEF5] bg-white p-2.5 md:p-3.5 md:h-[86vh] md:max-h-[720px] md:min-h-[580px]">
         
-        {/* Left Side: Custom Illustration Panel - Banner on mobile, full panel on desktop */}
+        {/* Left Side: Blue Illustration Panel */}
         <div className="w-full md:w-[48%] shrink-0 h-[300px] md:h-full flex">
           <AuthIllustration />
         </div>
 
-        {/* Right Side: Authentication Form - Takes 52% width on desktop, 100% on mobile */}
+        {/* Right Side: Authentication Form */}
         <div className="auth-form-container w-full md:w-[52%] flex flex-col justify-start md:justify-center px-4 py-8 sm:px-8 md:px-12 lg:px-16 overflow-y-auto">
-          <div className="w-full">
-            {/* Header branding on mobile only */}
+          <div className="w-full max-w-sm">
+            {/* Mobile branding */}
             <div className="mb-6 md:hidden">
               <Link href="/" className="text-xs font-bold uppercase tracking-wider text-brand">
-                Manajemen Bimbel
+                Bimble Smart
               </Link>
             </div>
 
@@ -44,17 +44,17 @@ export function AuthCard({ title, description, children, footer }: AuthCardProps
               {children}
             </div>
 
-            {/* Terms of Service / Privacy Policy notice */}
+            {/* Terms of Service */}
             <div className="mt-6 text-center app-caption-small text-slate-400">
               Dengan melanjutkan, Anda menyetujui{" "}
-              <Link href="#" className="underline transition hover:text-brand">
+              <Link href="#" className="underline underline-offset-2 transition hover:text-brand">
                 Ketentuan Layanan
               </Link>{" "}
               dan{" "}
-              <Link href="#" className="underline transition hover:text-brand">
+              <Link href="#" className="underline underline-offset-2 transition hover:text-brand">
                 Kebijakan Privasi
-              </Link>{" "}
-              kami.
+              </Link>
+              {" "}kami.
             </div>
 
             {/* Footer Links */}

@@ -3,6 +3,8 @@ import { AttendanceRecap } from "@/components/app/attendance-recap";
 import { requireRole } from "@/lib/auth/session";
 import { getAdminAttendanceRecap } from "@/app/attendance/page-data";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminAttendancePage() {
   const user = await requireRole(["admin"]);
   const rows = await getAdminAttendanceRecap();

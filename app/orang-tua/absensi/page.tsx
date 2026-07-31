@@ -1,18 +1,16 @@
 import { AppShell } from "@/components/app/app-shell";
 import { requireRole } from "@/lib/auth/session";
+import { getParentScope } from "@/lib/parents/scope";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ParentAttendanceView } from "@/components/app/parent-attendance-view";
+
+export const dynamic = "force-dynamic";
 
 export default async function ParentAttendancePage() {
   const user = await requireRole(["parent"]);
   const supabase = await createSupabaseServerClient();
 
-  // 1. Get parent record from profile
-  const { data: parent } = await supabase
-    .from("parents")
-    .select("id")
-    .eq("profile_id", user.id)
-    .maybeSingle();
+  const { parent, parentIds } = await getParentScope(supabase, user.id);
 
   if (!parent) {
     return (
@@ -26,14 +24,13 @@ export default async function ParentAttendancePage() {
     );
   }
 
-  // 2. Get children of this parent
   const { data: students } = await supabase
     .from("students")
     .select("id, full_name")
-    .eq("parent_id", parent.id);
+    .in("parent_id", parentIds);
 
-  const childIds = (students ?? []).map((s) => s.id);
-  const childNames = new Map((students ?? []).map((s) => [s.id, s.full_name]));
+  const childIds = (students ?? []).map((student) => student.id);
+  const childNames = new Map((students ?? []).map((student) => [student.id, student.full_name]));
 
   if (!childIds.length) {
     return (
@@ -47,28 +44,34 @@ export default async function ParentAttendancePage() {
     );
   }
 
-  // 3. Get attendance records only for this parent's children + schedule info
   const [
     { data: attendance },
     { data: schedules },
     { data: classes },
+    { data: enrollments },
   ] = await Promise.all([
     supabase
       .from("student_attendance")
       .select("student_id, schedule_id, status, notes, recorded_at")
       .in("student_id", childIds)
       .order("recorded_at", { ascending: false }),
-    supabase.from("schedules").select("id, class_id, starts_at"),
+    supabase.from("schedules").select("id, class_id, starts_at, classes(name)"),
     supabase.from("classes").select("id, name"),
+    supabase.from("student_classes").select("student_id, class_id").in("student_id", childIds),
   ]);
 
-  const scheduleMap = new Map((schedules ?? []).map((s) => [s.id, s]));
-  const classMap = new Map((classes ?? []).map((c) => [c.id, c.name]));
+  const scheduleMap = new Map((schedules ?? []).map((schedule) => [schedule.id, schedule]));
+  const classMap = new Map((classes ?? []).map((classRow) => [classRow.id, classRow.name]));
+  const childClassIds = new Set((enrollments ?? []).map((item) => item.class_id));
 
   const rows = (attendance ?? []).map((item) => {
     const schedule = scheduleMap.get(item.schedule_id ?? "");
-    const className = schedule ? classMap.get(schedule.class_id) ?? "—" : "—";
+    const joinedClass = (schedule as any)?.classes as { name?: string | null } | null;
+    const className = schedule
+      ? joinedClass?.name ?? classMap.get(schedule.class_id) ?? (childClassIds.has(schedule.class_id) ? "Kelas Anak" : "-")
+      : "-";
     const sessionDate = schedule ? new Date(schedule.starts_at) : null;
+
     return {
       student_name: childNames.get(item.student_id) ?? "Siswa",
       class_name: className,
@@ -81,7 +84,7 @@ export default async function ParentAttendancePage() {
 
   return (
     <AppShell role={user.role} email={user.email} name={user.name} title="Absensi Anak" activeNav="Absensi">
-      <ParentAttendanceView rows={rows} children={(students ?? []).map((s) => s.full_name)} />
+      <ParentAttendanceView rows={rows} children={(students ?? []).map((student) => student.full_name)} />
     </AppShell>
   );
 }

@@ -1,5 +1,7 @@
 import { AppShell } from "@/components/app/app-shell";
+import { KpiCard } from "@/components/app/kpi-card";
 import { requireRole } from "@/lib/auth/session";
+import { getMentorScope } from "@/lib/mentors/scope";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Users, BookOpen, CalendarDays, Clock } from "lucide-react";
 
@@ -7,6 +9,7 @@ export const metadata = {
   title: "Kelas Saya | BimbelPro",
   description: "Daftar kelas yang diampu mentor",
 };
+export const dynamic = "force-dynamic";
 
 type KelasDetail = {
   id: string;
@@ -21,12 +24,7 @@ export default async function MentorKelasPage() {
   const user = await requireRole(["mentor"]);
   const supabase = await createSupabaseServerClient();
 
-  // Cari mentor record
-  const { data: mentor } = await supabase
-    .from("mentors")
-    .select("id, full_name")
-    .eq("profile_id", user.id)
-    .maybeSingle();
+  const { mentor, mentorIds } = await getMentorScope(supabase, user.id);
 
   let kelasList: KelasDetail[] = [];
 
@@ -35,10 +33,12 @@ export default async function MentorKelasPage() {
     const { data: assignments } = await supabase
       .from("mentor_assignments")
       .select("class_id, classes(id, name, description, subject_id, subjects(name))")
-      .eq("mentor_id", mentor.id);
+      .in("mentor_id", mentorIds);
 
-    if (assignments?.length) {
-      const classIds = assignments.map((a) => a.class_id);
+    const uniqueAssignments = [...new Map((assignments ?? []).map((item) => [item.class_id, item])).values()];
+
+    if (uniqueAssignments.length) {
+      const classIds = uniqueAssignments.map((a) => a.class_id);
 
       // Hitung total siswa per kelas
       const { data: enrollments } = await supabase
@@ -55,7 +55,7 @@ export default async function MentorKelasPage() {
         .gte("starts_at", now)
         .order("starts_at");
 
-      kelasList = assignments.map((a) => {
+      kelasList = uniqueAssignments.map((a) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cls = a.classes as any;
         const siswaCount = (enrollments ?? []).filter((e) => e.class_id === a.class_id).length;
@@ -96,7 +96,7 @@ export default async function MentorKelasPage() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Kelas Saya</h1>
+          <h1 className="app-title-primary">Kelas Saya</h1>
           <p className="text-sm text-slate-500 mt-1">
             {mentor
               ? `Daftar kelas yang diampu oleh ${mentor.full_name}`
@@ -107,24 +107,8 @@ export default async function MentorKelasPage() {
         {/* Summary */}
         {mentor && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-sm">
-              <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-brand">
-                <BookOpen size={15} strokeWidth={2.2} />
-              </div>
-              <p className="text-sm font-semibold text-ink">Kelas</p>
-              <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{kelasList.length}</p>
-              <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Kelas yang diampu</p>
-            </div>
-            <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-sm">
-              <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
-                <Users size={15} strokeWidth={2.2} />
-              </div>
-              <p className="text-sm font-semibold text-ink">Siswa</p>
-              <p className="mt-5 text-[28px] font-semibold leading-none text-ink">
-                {kelasList.reduce((s, k) => s + k.totalSiswa, 0)}
-              </p>
-              <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Dari seluruh kelas</p>
-            </div>
+            <KpiCard icon={BookOpen} label="Kelas" value={String(kelasList.length)} detail="Kelas yang diampu" tone="payroll" />
+            <KpiCard icon={Users} label="Siswa" value={String(kelasList.reduce((s, k) => s + k.totalSiswa, 0))} detail="Dari seluruh kelas" tone="balance" />
           </div>
         )}
 

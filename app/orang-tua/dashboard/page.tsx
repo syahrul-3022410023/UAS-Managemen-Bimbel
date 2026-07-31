@@ -4,6 +4,8 @@ import { requireRole } from "@/lib/auth/session";
 import { getParentMetrics } from "@/lib/dashboard/data";
 import { Users } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function ParentDashboardPage() {
   const user = await requireRole(["parent"]);
   const metrics = await getParentMetrics(user.id);

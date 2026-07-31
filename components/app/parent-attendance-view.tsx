@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { CheckCircle2, Clock, BookOpen, XCircle, ChevronDown, Users } from "lucide-react";
+import { CheckCircle2, Clock, BookOpen, XCircle, Users } from "lucide-react";
+import { DataTableShell } from "./data-table-shell";
+import { EmptyStateRow } from "./empty-state";
+import { KpiCard } from "./kpi-card";
+import { AppSelect } from "./app-select";
 
 type AttendanceRow = {
   student_name: string;
@@ -42,6 +46,13 @@ export function ParentAttendanceView({
 }) {
   const [filterStudent, setFilterStudent] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const childOptions = children.map((name) => ({ value: name, label: name }));
+  const statusOptions = [
+    { value: "present", label: "Hadir" },
+    { value: "late", label: "Terlambat" },
+    { value: "excused", label: "Izin" },
+    { value: "absent", label: "Tidak Hadir" },
+  ];
 
   const filtered = useMemo(
     () =>
@@ -69,74 +80,41 @@ export function ParentAttendanceView({
       {/* Summary Strip */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Sesi", value: total, color: "bg-brand", icon: Users },
-          { label: "Hadir", value: countOf("present"), color: "bg-sky-500", icon: CheckCircle2 },
-          { label: "Izin / Terlambat", value: countOf("excused") + countOf("late"), color: "bg-cyan-500", icon: Clock },
-          { label: "Tidak Hadir", value: countOf("absent"), color: "bg-blue-500", icon: XCircle },
-        ].map(({ label, value, color, icon: Icon }) => (
-          <div key={label} className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-apple-soft">
-            <div className={`mb-5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${color}`}>
-              <Icon size={15} strokeWidth={2.2} className="text-white" />
-            </div>
-            <p className="text-sm font-semibold text-ink">{label}</p>
-            <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{value}</p>
-            <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Berdasarkan filter aktif</p>
-          </div>
+          { label: "Sesi", value: total, icon: Users, tone: "payroll" as const },
+          { label: "Hadir", value: countOf("present"), icon: CheckCircle2, tone: "income" as const },
+          { label: "Izin / Terlambat", value: countOf("excused") + countOf("late"), icon: Clock, tone: "balance" as const },
+          { label: "Tidak Hadir", value: countOf("absent"), icon: XCircle, tone: "expense" as const },
+        ].map(({ label, value, icon, tone }) => (
+          <KpiCard key={label} icon={icon} label={label} value={String(value)} detail="Berdasarkan filter aktif" tone={tone} />
         ))}
       </div>
 
-      {/* Filter Bar */}
-      {(children.length > 1 || true) && (
-        <div className="mb-4 flex flex-wrap gap-3">
-          {/* Filter Anak */}
-          {children.length > 1 && (
-            <div className="relative">
-              <select
-                value={filterStudent}
-                onChange={(e) => setFilterStudent(e.target.value)}
-                className="appearance-none rounded-lg border border-slate-200 bg-white pl-3 pr-8 py-2 text-sm text-slate-700 outline-none focus:border-brand focus:ring-2 focus:ring-brand/10"
+      <DataTableShell
+        icon={Users}
+        title="Database Absensi"
+        totalCount={rows.length}
+        totalLabel="catatan absensi"
+        shownCount={filtered.length}
+        controls={
+          <>
+            {children.length > 1 && (
+              <AppSelect value={filterStudent} onChange={setFilterStudent} options={childOptions} placeholder="Semua Anak" className="w-40" />
+            )}
+            <AppSelect value={filterStatus} onChange={setFilterStatus} options={statusOptions} placeholder="Semua Status" className="w-40" />
+            {(filterStudent || filterStatus) && (
+              <button
+                onClick={() => { setFilterStudent(""); setFilterStatus(""); }}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-500 transition hover:bg-slate-50"
               >
-                <option value="">Semua Anak</option>
-                {children.map((name) => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            </div>
-          )}
-
-          {/* Filter Status */}
-          <div className="relative">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="appearance-none rounded-lg border border-slate-200 bg-white pl-3 pr-8 py-2 text-sm text-slate-700 outline-none focus:border-brand focus:ring-2 focus:ring-brand/10"
-            >
-              <option value="">Semua Status</option>
-              <option value="present">Hadir</option>
-              <option value="late">Terlambat</option>
-              <option value="excused">Izin</option>
-              <option value="absent">Tidak Hadir</option>
-            </select>
-            <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          </div>
-
-          {(filterStudent || filterStatus) && (
-            <button
-              onClick={() => { setFilterStudent(""); setFilterStatus(""); }}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-500 hover:bg-slate-50 transition"
-            >
-              Reset filter
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Table */}
-      <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-apple-soft">
+                Reset filter
+              </button>
+            )}
+          </>
+        }
+      >
         <div className="overflow-x-auto">
           <table className="w-full min-w-[620px] text-sm">
-            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+            <thead className="bg-slate-50/80 text-left text-[13px] text-slate-500">
               <tr>
                 {children.length > 1 && <th className="px-5 py-3.5">Nama Anak</th>}
                 <th className="px-5 py-3.5">Kelas</th>
@@ -162,11 +140,12 @@ export function ParentAttendanceView({
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-5 py-14 text-center text-slate-400">
-                    Belum ada riwayat absensi.
-                  </td>
-                </tr>
+                <EmptyStateRow
+                  colSpan={children.length > 1 ? 5 : 4}
+                  icon={Users}
+                  title="Belum ada riwayat absensi"
+                  description="Riwayat kehadiran anak akan muncul setelah absensi sesi tersimpan."
+                />
               )}
             </tbody>
           </table>
@@ -176,7 +155,7 @@ export function ParentAttendanceView({
             Menampilkan {filtered.length} dari {rows.length} catatan
           </div>
         )}
-      </section>
+      </DataTableShell>
     </>
   );
 }

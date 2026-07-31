@@ -12,10 +12,13 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const { data: student } = await supabase.from("students").select("*").eq("id", id).maybeSingle();
   if (!student) notFound();
 
-  const [{ data: parent }, { data: packageItem }] = await Promise.all([
-    student.parent_id ? supabase.from("parents").select("full_name, phone").eq("id", student.parent_id).maybeSingle() : Promise.resolve({ data: null }),
-    student.package_id ? supabase.from("packages").select("name, duration_months, sessions_per_month, price").eq("id", student.package_id).maybeSingle() : Promise.resolve({ data: null })
-  ]);
+  const { data: parent } = student.parent_id
+    ? await supabase.from("parents").select("full_name, phone, package_id").eq("id", student.parent_id).maybeSingle()
+    : { data: null };
+  const packageId = student.package_id ?? parent?.package_id;
+  const { data: packageItem } = packageId
+    ? await supabase.from("packages").select("name, duration_months, sessions_per_month, price").eq("id", packageId).maybeSingle()
+    : { data: null };
   const parentPhone = student.parent_phone ?? parent?.phone ?? "";
   const items = [
     { icon: GraduationCap, label: "Kode Siswa", value: student.student_number },
@@ -32,7 +35,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
       <section className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-apple-soft">
         <div className="border-b border-slate-100 bg-gradient-to-r from-brand/10 to-cyan-50 px-6 py-7">
           <p className="text-sm font-semibold text-brand">Profil Siswa</p>
-          <h1 className="mt-1 text-3xl font-bold text-ink">{student.full_name}</h1>
+          <h1 className="app-title-primary mt-1">{student.full_name}</h1>
           <p className="mt-2 text-sm font-semibold text-slate-400">{student.student_number}</p>
           <p className="mt-2 text-sm text-slate-500">{student.address || "Alamat belum ditambahkan"}</p>
         </div>

@@ -13,6 +13,7 @@ export type PayrollRow = {
   total_amount: number;
   status: "unpaid" | "paid";
   paid_at: string | null;
+  cash_flow_id: string | null;
   notes: string | null;
   created_at: string;
 };
@@ -57,6 +58,7 @@ export async function getPayrollWorkspace() {
     total_amount: Number(row.total_amount),
     status: row.status,
     paid_at: row.paid_at,
+    cash_flow_id: row.cash_flow_id ?? null,
     notes: row.notes,
     created_at: row.created_at,
   })) as PayrollRow[];
@@ -85,6 +87,7 @@ export async function getPayrollDetail(id: string) {
       total_amount: Number(payroll.total_amount),
       status: payroll.status,
       paid_at: payroll.paid_at,
+      cash_flow_id: payroll.cash_flow_id ?? null,
       notes: payroll.notes,
       created_at: payroll.created_at,
     } as PayrollRow,
@@ -118,6 +121,7 @@ export async function getMentorPayrolls(profileId: string) {
       total_amount: Number(row.total_amount),
       status: row.status,
       paid_at: row.paid_at,
+      cash_flow_id: row.cash_flow_id ?? null,
       notes: row.notes,
       created_at: row.created_at,
     })) as PayrollRow[],

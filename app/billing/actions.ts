@@ -23,6 +23,23 @@ const paymentSchema = z.object({
   paid_at: z.string().min(1, "Tanggal pembayaran wajib diisi."),
 });
 
+const bulkGenerateSchema = z.object({
+  month: z.coerce.number().int().min(1).max(12),
+  year: z.coerce.number().int().min(2020),
+});
+
+function defaultDueDate(year: number, month: number) {
+  return new Date(year, month, 0).toISOString().slice(0, 10);
+}
+
+function dateOnly(value: string) {
+  return value.slice(0, 10);
+}
+
+function paymentCashFlowMarker(paymentId: string) {
+  return `[payment:${paymentId}]`;
+}
+
 // ─── Generate Invoice ─────────────────────────────────────────────────────────
 
 export async function generateInvoice(raw: Record<string, unknown>) {
@@ -37,16 +54,18 @@ export async function generateInvoice(raw: Record<string, unknown>) {
   // Ambil data siswa beserta paket
   const { data: student, error: studentError } = await supabase
     .from("students")
-    .select("id, full_name, package_id, packages(id, name, price)")
+    .select("id, full_name, package_id, packages(id, name, price), parents(package_id, packages(id, name, price))")
     .eq("id", student_id)
     .maybeSingle();
 
   if (studentError || !student)
     return { error: "Siswa tidak ditemukan." };
 
-  const pkg = (student as any).packages as { id: string; name: string; price: number } | null;
+  const studentPackage = (student as any).packages as { id: string; name: string; price: number } | null;
+  const parentPackage = ((student as any).parents as { packages?: { id: string; name: string; price: number } | null } | null)?.packages ?? null;
+  const pkg = studentPackage ?? parentPackage;
   if (!pkg)
-    return { error: "Siswa belum memiliki paket bimbel. Tetapkan paket terlebih dahulu." };
+    return { error: "Orang tua siswa belum memiliki paket bimbel. Tetapkan paket terlebih dahulu." };
 
   const { error } = await supabase.from("invoices").insert({
     student_id,
@@ -70,6 +89,88 @@ export async function generateInvoice(raw: Record<string, unknown>) {
   return { success: true };
 }
 
+export async function generateMonthlyInvoices(raw: Record<string, unknown>) {
+  const user = await requireRole(["admin"]);
+  const result = bulkGenerateSchema.safeParse(raw);
+  if (!result.success) return { error: result.error.issues[0]?.message ?? "Periode invoice tidak valid." };
+
+  const { month, year } = result.data;
+  const supabase = await createSupabaseServerClient();
+  const [{ data: students, error: studentError }, { data: packages }] = await Promise.all([
+    supabase.from("students").select("id, parent_id, package_id, parents(package_id)").order("full_name"),
+    supabase.from("packages").select("id, price"),
+  ]);
+  if (studentError) return { error: studentError.message };
+
+  const packageMap = new Map((packages ?? []).map((item) => [item.id, Number(item.price ?? 0)]));
+  const { data: existingInvoices } = await supabase
+    .from("invoices")
+    .select("student_id")
+    .eq("month", month)
+    .eq("year", year);
+  const existingStudentIds = new Set((existingInvoices ?? []).map((invoice) => invoice.student_id));
+  const values: {
+    student_id: string;
+    package_id: string;
+    amount: number;
+    due_date: string;
+    status: "unpaid";
+    month: number;
+    year: number;
+    notes: string;
+    created_by: string;
+  }[] = [];
+
+  for (const student of students ?? []) {
+    if (existingStudentIds.has(student.id)) continue;
+    const parentPackageId = ((student as any).parents as { package_id?: string | null } | null)?.package_id ?? null;
+    const packageId = student.package_id ?? parentPackageId;
+    if (!packageId || !packageMap.has(packageId)) continue;
+    values.push({
+      student_id: student.id,
+      package_id: packageId,
+      amount: packageMap.get(packageId) ?? 0,
+      due_date: defaultDueDate(year, month),
+      status: "unpaid",
+      month,
+      year,
+      notes: "Generate bulanan",
+      created_by: user.id,
+    });
+  }
+
+  if (!values.length) return { error: "Semua siswa berpaket sudah memiliki invoice pada periode ini." };
+
+  const { error } = await supabase.from("invoices").insert(values);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/invoice");
+  return { success: true, generated: values.length };
+}
+
+export async function deleteInvoice(invoiceId: string) {
+  await requireRole(["admin"]);
+  const supabase = await createSupabaseServerClient();
+  const { data: linkedPayments } = await supabase
+    .from("payments")
+    .select("id")
+    .eq("invoice_id", invoiceId);
+
+  const { error } = await supabase.from("invoices").delete().eq("id", invoiceId);
+  if (error) return { error: error.message };
+  for (const payment of linkedPayments ?? []) {
+    await supabase
+      .from("cash_flows")
+      .delete()
+      .ilike("description", `%${paymentCashFlowMarker(payment.id)}%`);
+  }
+  revalidatePath("/admin/invoice");
+  revalidatePath("/admin/arus-kas");
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/laporan");
+  return { success: true };
+}
+
 // ─── Save Payment ─────────────────────────────────────────────────────────────
 
 export async function savePayment(invoiceId: string, raw: Record<string, unknown>) {
@@ -83,7 +184,7 @@ export async function savePayment(invoiceId: string, raw: Record<string, unknown
   // Cek invoice ada dan belum lunas.
   const { data: invoice, error: invError } = await supabase
     .from("invoices")
-    .select("id, amount, status")
+    .select("id, invoice_number, student_id, amount, status, month, year")
     .eq("id", invoiceId)
     .maybeSingle();
 
@@ -102,8 +203,14 @@ export async function savePayment(invoiceId: string, raw: Record<string, unknown
   if (result.data.amount > remaining)
     return { error: `Nominal melebihi sisa tagihan. Sisa: Rp ${remaining.toLocaleString("id-ID")}.` };
 
+  const { data: student } = await supabase
+    .from("students")
+    .select("full_name")
+    .eq("id", invoice.student_id)
+    .maybeSingle();
+
   // Insert payment
-  const { error: payError } = await supabase.from("payments").insert({
+  const { data: payment, error: payError } = await supabase.from("payments").insert({
     invoice_id: invoiceId,
     amount: result.data.amount,
     method: result.data.method,
@@ -111,21 +218,42 @@ export async function savePayment(invoiceId: string, raw: Record<string, unknown
     notes: result.data.notes ?? null,
     paid_at: result.data.paid_at,
     recorded_by: user.id,
-  });
+  }).select("id").single();
 
-  if (payError) return { error: payError.message };
+  if (payError || !payment) return { error: payError?.message ?? "Pembayaran gagal disimpan." };
+
+  const { data: cashFlow, error: cashError } = await supabase
+    .from("cash_flows")
+    .insert({
+      transaction_date: dateOnly(result.data.paid_at),
+      type: "income",
+      category: "Pembayaran SPP",
+      amount: result.data.amount,
+      description: `Pembayaran SPP ${student?.full_name ?? "siswa"} periode ${invoice.month}/${invoice.year}${invoice.invoice_number ? ` (${invoice.invoice_number})` : ""} ${paymentCashFlowMarker(payment.id)}`,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (cashError || !cashFlow) {
+    await supabase.from("payments").delete().eq("id", payment.id);
+    return { error: cashError?.message ?? "Arus kas pembayaran gagal dibuat." };
+  }
 
   // Update status invoice otomatis
   const newTotal = totalPaid + result.data.amount;
   const newStatus = newTotal >= Number(invoice.amount) ? "paid" : "unpaid";
 
-  await supabase
+  const { error: statusError } = await supabase
     .from("invoices")
     .update({ status: newStatus })
     .eq("id", invoiceId);
+  if (statusError) return { error: statusError.message };
 
   revalidatePath(`/admin/invoice/${invoiceId}`);
   revalidatePath("/admin/invoice");
+  revalidatePath("/admin/arus-kas");
+  revalidatePath("/admin/dashboard");
   revalidatePath("/admin/laporan");
   return { success: true };
 }
@@ -160,6 +288,10 @@ export async function deletePayment(paymentId: string, invoiceId: string) {
 
   const { error } = await supabase.from("payments").delete().eq("id", paymentId);
   if (error) return { error: error.message };
+  await supabase
+    .from("cash_flows")
+    .delete()
+    .ilike("description", `%${paymentCashFlowMarker(paymentId)}%`);
 
   // Recalculate invoice status after deletion
   const { data: invoice } = await supabase
@@ -182,6 +314,8 @@ export async function deletePayment(paymentId: string, invoiceId: string) {
 
   revalidatePath(`/admin/invoice/${invoiceId}`);
   revalidatePath("/admin/invoice");
+  revalidatePath("/admin/arus-kas");
+  revalidatePath("/admin/dashboard");
   revalidatePath("/admin/laporan");
   return { success: true };
 }

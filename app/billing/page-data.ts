@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getParentScope } from "@/lib/parents/scope";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -203,18 +204,14 @@ export async function getAdminPayments(): Promise<PaymentRecapRow[]> {
 export async function getParentInvoices(parentProfileId: string): Promise<InvoiceRow[]> {
   const supabase = await createSupabaseServerClient();
 
-  const { data: parent } = await supabase
-    .from("parents")
-    .select("id")
-    .eq("profile_id", parentProfileId)
-    .maybeSingle();
+  const { parent, parentIds } = await getParentScope(supabase, parentProfileId);
 
   if (!parent) return [];
 
   const { data: students } = await supabase
     .from("students")
     .select("id, full_name, package_id")
-    .eq("parent_id", parent.id);
+    .in("parent_id", parentIds);
 
   if (!students?.length) return [];
   const studentIds = students.map((s) => s.id);
@@ -271,7 +268,7 @@ export async function getStudentOptions(): Promise<StudentOption[]> {
   const [{ data: students }, { data: packages }] = await Promise.all([
     supabase
       .from("students")
-      .select("id, full_name, package_id")
+      .select("id, full_name, package_id, parents(package_id)")
       .order("full_name"),
     supabase.from("packages").select("id, name, price"),
   ]);
@@ -279,11 +276,13 @@ export async function getStudentOptions(): Promise<StudentOption[]> {
   const packageMap = new Map((packages ?? []).map((p) => [p.id, p]));
 
   return (students ?? []).map((s) => {
-    const pkg = s.package_id ? packageMap.get(s.package_id) : null;
+    const parentPackageId = ((s as any).parents as { package_id?: string | null } | null)?.package_id ?? null;
+    const packageId = s.package_id ?? parentPackageId;
+    const pkg = packageId ? packageMap.get(packageId) : null;
     return {
       value: s.id,
       label: s.full_name,
-      package_id: s.package_id ?? null,
+      package_id: packageId ?? null,
       package_name: pkg?.name ?? null,
       package_price: pkg ? Number(pkg.price) : null,
     };

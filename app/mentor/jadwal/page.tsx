@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/app/app-shell";
 import { requireRole } from "@/lib/auth/session";
+import { getMentorScope } from "@/lib/mentors/scope";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ReadonlyCalendar } from "@/components/app/readonly-calendar";
 
@@ -7,6 +8,7 @@ export const metadata = {
   title: "Jadwal Saya | BimbelPro",
   description: "Jadwal mengajar mentor",
 };
+export const dynamic = "force-dynamic";
 
 type ScheduleRow = {
   id: string;
@@ -24,34 +26,32 @@ export default async function MentorJadwalPage() {
   const user = await requireRole(["mentor"]);
   const supabase = await createSupabaseServerClient();
 
-  // Cari mentor record dari profile_id
-  const { data: mentor } = await supabase
-    .from("mentors")
-    .select("id, full_name")
-    .eq("profile_id", user.id)
-    .maybeSingle();
+  const { mentor, mentorIds } = await getMentorScope(supabase, user.id);
 
   let schedules: ScheduleRow[] = [];
   if (mentor) {
     const { data: scheduleRows } = await supabase
       .from("schedules")
-      .select("id, class_id, starts_at, ends_at, room")
-      .eq("mentor_id", mentor.id)
+      .select("id, class_id, package_id, starts_at, ends_at, room")
+      .in("mentor_id", mentorIds)
       .order("starts_at");
     const classIds = [...new Set((scheduleRows ?? []).map((item) => item.class_id))];
-    const [{ data: classes }, { data: subjects }, { data: packages }, { data: studentClasses }, { data: students }] = await Promise.all([
+    const [{ data: classes }, { data: subjects }, { data: packages }, { data: studentClasses }, { data: students }, { data: parents }] = await Promise.all([
       classIds.length ? supabase.from("classes").select("id, name, subject_id, package_id").in("id", classIds) : Promise.resolve({ data: [] }),
       supabase.from("subjects").select("id, name"),
       supabase.from("packages").select("id, name"),
       classIds.length ? supabase.from("student_classes").select("class_id, student_id").in("class_id", classIds) : Promise.resolve({ data: [] }),
-      supabase.from("students").select("id, full_name")
+      supabase.from("students").select("id, full_name, parent_id, package_id"),
+      supabase.from("parents").select("id, package_id")
     ]);
     const classMap = new Map((classes ?? []).map((item) => [item.id, item]));
     const subjectMap = new Map((subjects ?? []).map((item) => [item.id, item.name]));
     const packageMap = new Map((packages ?? []).map((item) => [item.id, item.name]));
     const studentMap = new Map((students ?? []).map((item) => [item.id, item.full_name]));
+    const studentPackageMap = new Map((students ?? []).map((student) => [student.id, student.package_id ?? (parents ?? []).find((parent) => parent.id === student.parent_id)?.package_id ?? null]));
     schedules = (scheduleRows ?? []).map((item) => {
       const classRow = classMap.get(item.class_id);
+      const packageId = item.package_id ?? classRow?.package_id ?? null;
       return {
         id: item.id,
         class_id: item.class_id,
@@ -59,9 +59,13 @@ export default async function MentorJadwalPage() {
         ends_at: item.ends_at,
         room: item.room,
         class_name: classRow?.name ?? "Kelas",
-        subject_name: classRow?.subject_id ? subjectMap.get(classRow.subject_id) ?? "-" : "-",
-        package_name: classRow?.package_id ? packageMap.get(classRow.package_id) ?? "Semua Paket" : "Semua Paket",
-        student_names: (studentClasses ?? []).filter((row) => row.class_id === item.class_id).map((row) => studentMap.get(row.student_id)).filter(Boolean) as string[],
+        subject_name: classRow?.subject_id ? subjectMap.get(classRow.subject_id) ?? classRow.name : classRow?.name ?? "Jadwal Kelas",
+        package_name: packageId ? packageMap.get(packageId) ?? "Semua Paket" : "Semua Paket",
+        student_names: (studentClasses ?? [])
+          .filter((row) => row.class_id === item.class_id)
+          .filter((row) => !item.package_id || studentPackageMap.get(row.student_id) === item.package_id)
+          .map((row) => studentMap.get(row.student_id))
+          .filter(Boolean) as string[],
       };
     });
   }
@@ -90,7 +94,7 @@ export default async function MentorJadwalPage() {
     >
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Jadwal Mengajar</h1>
+          <h1 className="app-title-primary">Jadwal Mengajar</h1>
           <p className="text-sm text-slate-500 mt-1">
             {mentor ? `Jadwal untuk ${mentor.full_name}` : "Data mentor tidak ditemukan"}
           </p>

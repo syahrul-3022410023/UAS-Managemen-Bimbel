@@ -6,7 +6,12 @@ import {
   TrendingUp, CheckCircle2, XCircle,
   BarChart2, AlertCircle,
 } from "lucide-react";
-import { AbsensiBarChart, PembayaranLineChart } from "@/components/app/laporan-charts";
+import { AbsensiBarChart } from "@/components/app/laporan-charts";
+import { DashboardFinanceChart } from "@/components/app/dashboard-charts";
+import { DataTableShell } from "@/components/app/data-table-shell";
+import { EmptyStateRow } from "@/components/app/empty-state";
+import { KpiCard } from "@/components/app/kpi-card";
+import { AppSelect } from "@/components/app/app-select";
 import type {
   LaporanSiswaRow,
   LaporanAbsensiResult,
@@ -31,19 +36,13 @@ function StatCard({
 }: {
   label: string; value: string; sub?: string; color?: "brand" | "emerald" | "amber" | "red";
 }) {
-  const bg = {
-    brand: "text-brand",
-    emerald: "text-sky-600",
-    amber: "text-cyan-600",
-    red: "text-blue-600",
-  }[color];
-  return (
-    <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4 shadow-sm">
-      <p className="text-sm font-semibold text-ink">{label}</p>
-      <p className={`mt-5 text-[28px] font-semibold leading-none ${bg}`}>{value}</p>
-      {sub && <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">{sub}</p>}
-    </div>
-  );
+  const tone = color === "emerald" ? "income" : color === "amber" ? "balance" : color === "red" ? "expense" : "payroll";
+  const icon = label.includes("Pembayaran") || label.includes("Penerimaan") || label.includes("Pendapatan") ? CreditCard
+    : label.includes("Absensi") || label.includes("Hadir") || label.includes("Sesi") ? CalendarCheck
+    : label.includes("Tidak") || label.includes("Belum") ? AlertCircle
+    : Users;
+
+  return <KpiCard icon={icon} label={label} value={value} detail={sub ?? ""} tone={tone} />;
 }
 
 // ─── Tab: Laporan Siswa ───────────────────────────────────────────────────────
@@ -69,25 +68,20 @@ function TabSiswa({ rows }: { rows: LaporanSiswaRow[] }) {
         <StatCard label="Rata-rata Hadir" value={`${avgHadir}%`} sub="Dari seluruh sesi" color={avgHadir >= 75 ? "emerald" : "amber"} />
       </div>
 
-      {/* Search + Table */}
-      <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3">
-          <Users size={16} className="text-slate-400" />
-          <h3 className="font-semibold text-slate-700 text-sm">Detail Per Siswa</h3>
-          <div className="ml-auto">
-            <input
-              type="text"
-              placeholder="Cari nama siswa…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="text-sm border border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-200 w-52"
-            />
-          </div>
-        </div>
+      <DataTableShell
+        icon={Users}
+        title="Database Laporan Siswa"
+        totalCount={rows.length}
+        totalLabel="siswa dianalisis"
+        shownCount={filtered.length}
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Cari nama siswa..."
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+            <thead className="bg-slate-50/80 text-[13px] text-slate-500">
+              <tr className="border-b border-slate-100">
                 <th className="px-5 py-3 text-left font-medium">Nama Siswa</th>
                 <th className="px-4 py-3 text-left font-medium">Kelas / Tingkat</th>
                 <th className="px-4 py-3 text-center font-medium">Total Sesi</th>
@@ -96,13 +90,14 @@ function TabSiswa({ rows }: { rows: LaporanSiswaRow[] }) {
                 <th className="px-4 py-3 text-center font-medium">Kehadiran</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100">
               {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
-                    {rows.length === 0 ? "Belum ada data siswa" : "Tidak ada hasil pencarian"}
-                  </td>
-                </tr>
+                <EmptyStateRow
+                  colSpan={6}
+                  icon={Users}
+                  title={rows.length === 0 ? "Belum ada data siswa" : "Tidak ada hasil pencarian"}
+                  description={rows.length === 0 ? "Data siswa akan muncul setelah siswa terdaftar." : "Coba ubah kata kunci pencarian."}
+                />
               ) : (
                 filtered.map((r) => (
                   <tr key={r.id} className="hover:bg-slate-50/60 transition-colors">
@@ -140,7 +135,7 @@ function TabSiswa({ rows }: { rows: LaporanSiswaRow[] }) {
             Menampilkan {filtered.length} dari {rows.length} siswa
           </div>
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }
@@ -162,27 +157,15 @@ function TabAbsensi({
 }) {
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 1, currentYear, currentYear + 1];
+  const monthOptions = MONTHS.map((month, index) => ({ value: index + 1, label: month }));
+  const yearOptions = years.map((year) => ({ value: year, label: String(year) }));
 
   return (
     <div className="space-y-6">
       {/* Filter */}
       <div className="flex flex-wrap gap-3 items-center">
-        <select
-          value={bulan}
-          onChange={(e) => onBulan(Number(e.target.value))}
-          className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
-        >
-          {MONTHS.map((m, i) => (
-            <option key={m} value={i + 1}>{m}</option>
-          ))}
-        </select>
-        <select
-          value={tahun}
-          onChange={(e) => onTahun(Number(e.target.value))}
-          className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
-        >
-          {years.map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
+        <AppSelect value={bulan} options={monthOptions} onChange={(value) => onBulan(Number(value))} placeholder="" className="w-44" />
+        <AppSelect value={tahun} options={yearOptions} onChange={(value) => onTahun(Number(value))} placeholder="" className="w-28" />
         <span className="text-xs text-slate-400">
           Periode: {MONTHS[bulan - 1]} {tahun}
         </span>
@@ -233,18 +216,18 @@ function TabPembayaran({
 }) {
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 1, currentYear, currentYear + 1];
+  const yearOptions = years.map((year) => ({ value: year, label: String(year) }));
+  const financeChartData = data.chart.map((point) => ({
+    month: point.bulan,
+    income: point.pendapatan,
+    expense: point.pengeluaran,
+  }));
 
   return (
     <div className="space-y-6">
       {/* Filter */}
       <div className="flex flex-wrap gap-3 items-center">
-        <select
-          value={tahun}
-          onChange={(e) => onTahun(Number(e.target.value))}
-          className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
-        >
-          {years.map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
+        <AppSelect value={tahun} options={yearOptions} onChange={(value) => onTahun(Number(value))} placeholder="" className="w-28" />
         <span className="text-xs text-slate-400">Tahun: {tahun}</span>
       </div>
 
@@ -276,16 +259,20 @@ function TabPembayaran({
             </div>
             <div>
               <h3 className="text-sm font-bold text-ink">
-                Grafik Pendapatan - Tahun {tahun}
+                Grafik Keuangan - Tahun {tahun}
               </h3>
-              <p className="mt-0.5 text-xs text-slate-500">Tren pendapatan dan jumlah transaksi bulanan.</p>
+              <p className="mt-0.5 text-xs text-slate-500">Penerimaan dan pengeluaran bulanan.</p>
             </div>
           </div>
           <span className="w-fit rounded-full border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-500">
             {data.chart.length} bulan
           </span>
         </div>
-        <PembayaranLineChart data={data.chart} />
+        <DashboardFinanceChart data={financeChartData} height={300} />
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-5 text-xs text-slate-500">
+          <span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#1688F0]" />Penerimaan</span>
+          <span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#67D4FF]" />Pengeluaran</span>
+        </div>
       </div>
 
       {/* Status breakdown */}
@@ -365,28 +352,27 @@ export function LaporanManager({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Laporan</h1>
-        <p className="text-sm text-slate-500 mt-1">Rekap data operasional bimbel secara menyeluruh</p>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-full max-w-full overflow-x-auto custom-scrollbar">
-        {TABS.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`flex flex-shrink-0 items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-              tab === key
-                ? "bg-white text-brand shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <Icon size={15} />
-            {label}
-          </button>
-        ))}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="app-title-primary">Laporan</h1>
+          <p className="mt-1 text-sm text-slate-500">Rekap data operasional bimbel secara menyeluruh</p>
+        </div>
+        <div className="inline-flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-slate-100 p-1 custom-scrollbar">
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`flex flex-shrink-0 items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                tab === key
+                  ? "bg-white text-brand shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <Icon size={15} />
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Info banner if no supabase connection */}

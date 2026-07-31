@@ -7,8 +7,11 @@ import {
   Plus, Trash2, X, CreditCard, Banknote, QrCode, MoreHorizontal, Printer
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { savePayment, updateInvoiceStatus, deletePayment } from "@/app/billing/actions";
 import type { InvoiceDetail } from "@/app/billing/page-data";
+import { ConfirmDialog } from "./confirm-dialog";
+import { AppSelect } from "./app-select";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,6 +35,7 @@ const methodIcons: Record<string, React.ReactNode> = {
 const methodLabels: Record<string, string> = {
   cash: "Tunai", transfer: "Transfer Bank", qris: "QRIS", other: "Lainnya"
 };
+const methodOptions = Object.entries(methodLabels).map(([value, label]) => ({ value, label }));
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
@@ -60,6 +64,7 @@ function PaymentForm({
   const [mounted, setMounted] = useState(false);
   const [message, setMessage] = useState<string>();
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   const remaining = invoice.amount - invoice.total_paid;
 
   const now = new Date();
@@ -70,7 +75,10 @@ function PaymentForm({
       const raw = Object.fromEntries(new FormData(form));
       const result = await savePayment(invoice.id, raw);
       if (result.error) setMessage(result.error);
-      else onClose();
+      else {
+        router.refresh();
+        onClose();
+      }
     });
   };
 
@@ -126,15 +134,7 @@ function PaymentForm({
           {/* Metode */}
           <label>
             <span className="mb-1.5 block text-sm font-medium text-slate-700">Metode Pembayaran</span>
-            <select
-              name="method"
-              defaultValue="cash"
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/10"
-            >
-              {Object.entries(methodLabels).map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
+            <AppSelect name="method" defaultValue="cash" options={methodOptions} placeholder="" className="w-full" />
           </label>
 
           {/* Tanggal */}
@@ -199,7 +199,9 @@ function PaymentForm({
 export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [message, setMessage] = useState<string>();
+  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const remaining = invoice.amount - invoice.total_paid;
   const progress = Math.min(100, (invoice.total_paid / invoice.amount) * 100);
@@ -209,14 +211,23 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
     startTransition(async () => {
       const result = await updateInvoiceStatus(invoice.id, status);
       if (result.error) setMessage(result.error);
+      else router.refresh();
     });
   };
 
   const handleDeletePayment = (paymentId: string) => {
-    if (!window.confirm("Hapus pembayaran ini?")) return;
+    setDeletingPaymentId(paymentId);
+  };
+
+  const confirmDeletePayment = () => {
+    if (!deletingPaymentId) return;
     startTransition(async () => {
-      const result = await deletePayment(paymentId, invoice.id);
+      const result = await deletePayment(deletingPaymentId, invoice.id);
       if (result.error) setMessage(result.error);
+      else {
+        setDeletingPaymentId(null);
+        router.refresh();
+      }
     });
   };
 
@@ -248,7 +259,7 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
                 <div className="mb-3">
                   <StatusBadge status={invoice.status} />
                 </div>
-                <h1 className="text-xl font-bold text-slate-900">{invoice.student_name}</h1>
+                <h1 className="app-title-secondary text-slate-900">{invoice.student_name}</h1>
                 <p className="mt-1 text-sm text-slate-500">
                   {invoice.invoice_number ?? "Invoice SPP"} - {MONTHS[invoice.month - 1]} {invoice.year}
                   {invoice.package_name && ` · ${invoice.package_name}`}
@@ -325,7 +336,7 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[500px] text-sm">
-                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <thead className="bg-slate-50/80 text-[13px] text-slate-500">
                     <tr>
                       <th className="px-5 py-3 text-left font-semibold">Tanggal</th>
                       <th className="px-5 py-3 text-left font-semibold">Metode</th>
@@ -428,6 +439,14 @@ export function InvoiceDetailView({ invoice }: { invoice: InvoiceDetail }) {
           onClose={() => setShowPaymentForm(false)}
         />
       )}
+      <ConfirmDialog
+        open={deletingPaymentId !== null}
+        title="Hapus Pembayaran?"
+        description="Riwayat pembayaran ini akan dihapus dan sisa tagihan akan dihitung ulang."
+        isPending={isPending}
+        onClose={() => setDeletingPaymentId(null)}
+        onConfirm={confirmDeletePayment}
+      />
     </>
   );
 }

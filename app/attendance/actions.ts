@@ -14,16 +14,26 @@ export async function saveAttendance(scheduleId: string, rawRows: unknown, rawMe
   const parsedMentorStatus = statuses.safeParse(rawMentorStatus);
   if (!parsedMentorStatus.success) return { error: "Status kehadiran mentor tidak valid." };
   const supabase = await createSupabaseServerClient();
-  const { data: schedule, error } = await supabase.from("schedules").select("class_id, mentor_id").eq("id", scheduleId).single();
+  const { data: schedule, error } = await supabase.from("schedules").select("class_id, package_id, mentor_id").eq("id", scheduleId).single();
   if (error || !schedule) return { error: "Jadwal tidak ditemukan atau tidak dapat diakses." };
   if (user.role === "mentor") { const { data: mentor } = await supabase.from("mentors").select("id").eq("profile_id", user.id).maybeSingle(); if (!mentor || mentor.id !== schedule.mentor_id) return { error: "Anda hanya dapat mengisi absensi jadwal sendiri." }; }
   const { data: memberships } = await supabase.from("student_classes").select("student_id").eq("class_id", schedule.class_id);
-  const permitted = new Set((memberships ?? []).map(x => x.student_id));
+  let permitted = new Set((memberships ?? []).map(x => x.student_id));
+  if (schedule.package_id && permitted.size) {
+    const [{ data: students }, { data: parents }] = await Promise.all([
+      supabase.from("students").select("id, parent_id, package_id").in("id", [...permitted]),
+      supabase.from("parents").select("id, package_id"),
+    ]);
+    const parentPackageMap = new Map((parents ?? []).map((parent) => [parent.id, parent.package_id]));
+    permitted = new Set((students ?? [])
+      .filter((student) => (student.package_id ?? parentPackageMap.get(student.parent_id)) === schedule.package_id)
+      .map((student) => student.id));
+  }
   if (rows.data.some(row => !permitted.has(row.student_id))) return { error: "Siswa tidak terdaftar di kelas jadwal ini." };
   const studentRows = rows.data.map(row => ({ ...row, schedule_id: scheduleId, recorded_by: user.id, notes: row.notes || null }));
   const { error: studentError } = await supabase.from("student_attendance").upsert(studentRows, { onConflict: "schedule_id,student_id" });
   if (studentError) return { error: studentError.message };
   const { error: mentorError } = await supabase.from("mentor_attendance").upsert({ schedule_id: scheduleId, mentor_id: schedule.mentor_id, status: parsedMentorStatus.data, recorded_by: user.id }, { onConflict: "schedule_id,mentor_id" });
   if (mentorError) return { error: mentorError.message };
-  revalidatePath("/admin/absensi"); revalidatePath("/mentor/absensi"); revalidatePath("/admin/dashboard"); revalidatePath("/mentor/dashboard"); return { success: true };
+  revalidatePath("/admin/absensi"); revalidatePath("/mentor/absensi"); revalidatePath("/orang-tua/absensi"); revalidatePath("/admin/dashboard"); revalidatePath("/mentor/dashboard"); return { success: true };
 }

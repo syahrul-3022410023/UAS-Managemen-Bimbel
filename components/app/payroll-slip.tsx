@@ -1,7 +1,9 @@
 "use client";
 
-import { Printer } from "lucide-react";
+import { Banknote, CalendarDays, Gift, Printer, ReceiptText } from "lucide-react";
 import type { PayrollDetailRow, PayrollRow } from "@/app/finance/page-data";
+import { EmptyStateRow } from "./empty-state";
+import { KpiCard } from "./kpi-card";
 
 const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const formatRp = (amount: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
@@ -43,7 +45,7 @@ export function PayrollSlip({ payroll, details }: { payroll: PayrollRow; details
 
         <div className="mt-6 overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <thead className="bg-slate-50/80 text-[13px] text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-semibold">Tanggal</th>
                 <th className="px-4 py-3 font-semibold">Kelas</th>
@@ -61,9 +63,12 @@ export function PayrollSlip({ payroll, details }: { payroll: PayrollRow; details
                 </tr>
               ))}
               {details.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-slate-500">Belum ada detail sesi pada slip ini.</td>
-                </tr>
+                <EmptyStateRow
+                  colSpan={4}
+                  icon={Printer}
+                  title="Belum ada detail sesi"
+                  description="Detail sesi akan muncul setelah mentor memiliki sesi mengajar pada periode ini."
+                />
               )}
             </tbody>
           </table>
@@ -85,11 +90,7 @@ export function PayrollSlip({ payroll, details }: { payroll: PayrollRow; details
 }
 
 function SlipStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4">
-      <p className="text-sm font-semibold text-ink">{label}</p>
-      <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{value}</p>
-      <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">Komponen payroll</p>
-    </div>
-  );
+  const icon = label.includes("Sesi") ? CalendarDays : label.includes("Bonus") ? Gift : label.includes("Potongan") ? ReceiptText : Banknote;
+  const tone = label.includes("Bonus") ? "income" : label.includes("Potongan") ? "expense" : label.includes("Sesi") ? "balance" : "payroll";
+  return <KpiCard icon={icon} label={label} value={value} detail="Komponen payroll" tone={tone} />;
 }

@@ -1,30 +1,52 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { ArrowDownLeft, ArrowUpRight, Plus, Trash2, X } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Plus, Trash2, X, ArrowLeftRight } from "lucide-react";
 import { deleteCashFlow, saveCashFlow } from "@/app/finance/actions";
 import type { CashFlowRow } from "@/app/finance/page-data";
+import { EmptyState, EmptyStateRow } from "./empty-state";
+import { DataTableShell } from "./data-table-shell";
+import { KpiCard } from "./kpi-card";
+import { ConfirmDialog } from "./confirm-dialog";
+import { AppSelect } from "./app-select";
 
 const formatRp = (amount: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
+const cashTypeOptions = [
+  { value: "income", label: "Pemasukan" },
+  { value: "expense", label: "Pengeluaran" },
+];
 
 export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: CashFlowRow[]; totalIncome: number; totalExpense: number }) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [message, setMessage] = useState<string>();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const filteredRows = useMemo(() => {
+    const keyword = query.trim().toLowerCase();
+    if (!keyword) return rows;
+
+    return rows.filter((row) => {
+      const typeLabel = row.type === "income" ? "pemasukan masuk" : "pengeluaran keluar";
+      return [row.category, row.description ?? "", typeLabel]
+        .some((value) => value.toLowerCase().includes(keyword));
+    });
+  }, [query, rows]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (open) document.body.style.overflow = "hidden";
+    if (open || deletingId) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [open]);
+  }, [open, deletingId]);
 
   const submit = (form: HTMLFormElement) => startTransition(async () => {
     const result = await saveCashFlow(Object.fromEntries(new FormData(form)));
@@ -36,10 +58,15 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
   });
 
   const remove = (id: string) => {
-    if (!window.confirm("Hapus transaksi arus kas ini?")) return;
+    setDeletingId(id);
+  };
+
+  const confirmRemove = () => {
+    if (!deletingId) return;
     startTransition(async () => {
-      const result = await deleteCashFlow(id);
+      const result = await deleteCashFlow(deletingId);
       if (result.error) setMessage(result.error);
+      setDeletingId(null);
     });
   };
 
@@ -64,9 +91,18 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
           <CashCard label="Saldo Manual" value={formatRp(totalIncome - totalExpense)} tone="balance" />
         </div>
 
-        <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white">
+        <DataTableShell
+          icon={ArrowLeftRight}
+          title="Riwayat Arus Kas"
+          totalCount={rows.length}
+          totalLabel="transaksi tercatat"
+          shownCount={filteredRows.length}
+          searchValue={query}
+          onSearchChange={setQuery}
+          searchPlaceholder="Cari kategori atau deskripsi..."
+        >
           <div className="divide-y divide-slate-100 sm:hidden">
-            {rows.map((row) => (
+            {filteredRows.map((row) => (
               <article key={row.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -81,18 +117,25 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
                 <p className={`mt-3 text-lg font-bold ${row.type === "income" ? "text-emerald-600" : "text-red-600"}`}>{formatRp(row.amount)}</p>
                 {row.description && <p className="mt-2 text-sm leading-relaxed text-slate-500">{row.description}</p>}
                 <div className="mt-4 flex justify-end">
-                  <button onClick={() => remove(row.id)} disabled={isPending} className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600 disabled:opacity-50">
+                  <button onClick={() => remove(row.id)} disabled={isPending} className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50">
                     <Trash2 size={15} /> Hapus
                   </button>
                 </div>
               </article>
             ))}
-            {rows.length === 0 && <div className="px-5 py-12 text-center text-sm text-slate-500">Belum ada transaksi arus kas.</div>}
+            {filteredRows.length === 0 && (
+              <EmptyState
+                icon={ArrowLeftRight}
+                title={query ? "Tidak ada transaksi yang cocok" : "Belum ada transaksi arus kas"}
+                description={query ? "Coba gunakan kata kunci lain untuk mencari transaksi." : "Catat pemasukan dan pengeluaran manual untuk memantau arus kas bimbel."}
+                action={!query ? { label: "+ Tambah Transaksi", onClick: () => setOpen(true) } : undefined}
+              />
+            )}
           </div>
 
           <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="bg-slate-50/80 text-[13px] text-slate-500">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Tanggal</th>
                   <th className="px-5 py-3 font-semibold">Tipe</th>
@@ -103,7 +146,7 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {rows.map((row) => (
+                {filteredRows.map((row) => (
                   <tr key={row.id} className="transition hover:bg-slate-50/70">
                     <td className="px-5 py-4 text-slate-600">{new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(row.transaction_date))}</td>
                     <td className="px-5 py-4">
@@ -116,21 +159,25 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
                     <td className={`px-5 py-4 font-bold ${row.type === "income" ? "text-emerald-600" : "text-red-600"}`}>{formatRp(row.amount)}</td>
                     <td className="max-w-[260px] truncate px-5 py-4 text-slate-500">{row.description ?? "-"}</td>
                     <td className="px-5 py-4 text-right">
-                      <button onClick={() => remove(row.id)} disabled={isPending} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50" aria-label="Hapus transaksi">
+                      <button onClick={() => remove(row.id)} disabled={isPending} className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600 transition hover:bg-red-100 disabled:opacity-50" aria-label="Hapus transaksi">
                         <Trash2 size={17} />
                       </button>
                     </td>
                   </tr>
                 ))}
-                {rows.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-slate-500">Belum ada transaksi arus kas.</td>
-                  </tr>
+                {filteredRows.length === 0 && (
+                  <EmptyStateRow
+                    colSpan={6}
+                    icon={ArrowLeftRight}
+                    title={query ? "Tidak ada transaksi yang cocok" : "Belum ada transaksi arus kas"}
+                    description={query ? "Coba gunakan kata kunci lain untuk mencari transaksi." : "Catat pemasukan dan pengeluaran manual untuk memantau arus kas bimbel."}
+                    action={!query ? { label: "+ Tambah Transaksi", onClick: () => setOpen(true) } : undefined}
+                  />
                 )}
               </tbody>
             </table>
           </div>
-        </section>
+        </DataTableShell>
       </div>
 
       {mounted && open && createPortal(
@@ -147,10 +194,7 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
               <div className="grid gap-4 sm:grid-cols-2">
                 <Label text="Tanggal"><input name="transaction_date" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} className="input" /></Label>
                 <Label text="Tipe">
-                  <select name="type" defaultValue="income" className="input">
-                    <option value="income">Pemasukan</option>
-                    <option value="expense">Pengeluaran</option>
-                  </select>
+                  <AppSelect name="type" defaultValue="income" options={cashTypeOptions} placeholder="" className="w-full" />
                 </Label>
                 <Label text="Kategori"><input name="category" required placeholder="Contoh: Sewa, Operasional" className="input" /></Label>
                 <Label text="Nominal"><input name="amount" required inputMode="numeric" placeholder="250000" className="input" /></Label>
@@ -168,23 +212,21 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
         </div>,
         document.body
       )}
+      <ConfirmDialog
+        open={deletingId !== null}
+        title="Hapus Transaksi?"
+        description="Transaksi arus kas ini akan dihapus dari riwayat dan tidak bisa dikembalikan."
+        isPending={isPending}
+        onClose={() => setDeletingId(null)}
+        onConfirm={confirmRemove}
+      />
     </>
   );
 }
 
 function CashCard({ label, value, tone }: { label: string; value: string; tone: "income" | "expense" | "balance" }) {
-  const styles = tone === "income" ? "bg-blue-50 text-brand" : tone === "expense" ? "bg-sky-50 text-sky-600" : "bg-cyan-50 text-cyan-600";
   const detail = tone === "balance" ? "Masuk manual - keluar manual" : "Transaksi arus kas manual";
-  return (
-    <div className="rounded-2xl border border-[#ECEEF5] bg-white p-4">
-      <span className={`mb-5 flex h-8 w-8 items-center justify-center rounded-xl ${styles}`}>
-        {tone === "expense" ? <ArrowUpRight size={15} strokeWidth={2.2} /> : <ArrowDownLeft size={15} strokeWidth={2.2} />}
-      </span>
-      <p className="text-sm font-semibold text-ink">{label}</p>
-      <p className="mt-5 text-[28px] font-semibold leading-none text-ink">{value}</p>
-      <p className="mt-3 text-xs font-normal leading-snug text-slate-500/70">{detail}</p>
-    </div>
-  );
+  return <KpiCard icon={tone === "expense" ? ArrowUpRight : ArrowDownLeft} label={label} value={value} detail={detail} tone={tone} />;
 }
 
 function Label({ text, children }: { text: string; children: React.ReactNode }) {

@@ -4,6 +4,8 @@ import { requireRole } from "@/lib/auth/session";
 import { getParentSchedules } from "./page-data";
 import { CalendarDays } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function ParentSchedulePage() {
   const user = await requireRole(["parent"]);
   const schedules = await getParentSchedules(user.id);

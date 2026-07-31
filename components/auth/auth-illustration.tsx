@@ -1,120 +1,218 @@
 "use client";
 
-import { BookOpen, CalendarCheck, GraduationCap, ReceiptText, Sparkles, Users } from "lucide-react";
+import { GraduationCap, CalendarCheck, ReceiptText, TrendingUp, Sparkles } from "lucide-react";
 
-const rows = [
-  ["Admin", "Invoice", "08.00", "Pantau"],
-  ["Mentor", "Jadwal", "16.00", "Mengajar"],
-  ["Orang Tua", "Absensi", "17.30", "Terima"],
-  ["Siswa", "Kelas", "19.00", "Aktif"],
+const scheduleItems = [
+  { time: "08.00", subject: "Matematika", room: "Kelas A" },
+  { time: "10.00", subject: "Fisika", room: "Kelas B" },
+  { time: "13.00", subject: "Kimia", room: "Kelas C" },
 ];
 
-const stats = [
-  { label: "Admin", value: "Kontrol", icon: Users },
-  { label: "Mentor", value: "Jadwal", icon: CalendarCheck },
-  { label: "Ortu", value: "Update", icon: ReceiptText },
-];
+const statBars = [38, 56, 44, 72, 62, 88, 78];
 
 export function AuthIllustration() {
   return (
-    <div className="auth-product-panel relative flex h-full w-full flex-col justify-between overflow-hidden rounded-[1.65rem] bg-[#0B6FFB] p-5 text-white md:p-8">
+    <div className="auth-product-panel relative flex h-full w-full flex-col justify-between overflow-hidden rounded-[1.4rem] bg-[#0B6FFB] p-6 text-white md:p-8">
+      {/* Background grid */}
       <div className="auth-product-grid absolute inset-0" />
+
+      {/* Ambient glows */}
       <div className="auth-product-glow auth-product-glow-1 absolute" />
       <div className="auth-product-glow auth-product-glow-2 absolute" />
-      <svg className="pointer-events-none absolute inset-0 h-full w-full opacity-70" viewBox="0 0 620 720" fill="none" aria-hidden="true">
-        <path className="auth-product-line" d="M-20 660 C72 588 112 666 188 612 C270 554 326 648 406 590 C480 536 528 580 640 510" />
-        <path className="auth-product-line auth-product-line-2" d="M18 84 L48 62 L48 28 L82 8" />
-        <path className="auth-product-line auth-product-line-3" d="M530 82 L572 108 L572 156 L620 186" />
-        <path className="auth-product-hex" d="M520 602 L590 642 L590 720 L520 760 L450 720 L450 642 Z" />
-        <path className="auth-product-hex auth-product-hex-2" d="M12 606 L60 634 L60 690 L12 718 L-36 690 L-36 634 Z" />
+
+      {/* Decorative SVG paths */}
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-60"
+        viewBox="0 0 480 680"
+        fill="none"
+        aria-hidden="true"
+      >
+        {/* Flowing curve at bottom */}
+        <path
+          className="auth-product-line"
+          d="M-20 580 C72 520 112 598 188 552 C270 502 326 580 406 532 C480 488 528 528 560 490"
+          stroke="rgba(255,255,255,0.35)"
+          strokeDasharray="10 16"
+          strokeLinecap="round"
+          strokeWidth="1.6"
+        />
+        {/* Top-left corner accent */}
+        <path
+          className="auth-product-line auth-product-line-2"
+          d="M10 72 L42 52 L42 22 L74 6"
+          stroke="rgba(255,255,255,0.25)"
+          strokeDasharray="4 8"
+          strokeLinecap="round"
+          strokeWidth="1.4"
+        />
+        {/* Top-right corner accent */}
+        <path
+          className="auth-product-line auth-product-line-3"
+          d="M410 68 L448 92 L448 136 L490 162"
+          stroke="rgba(255,255,255,0.2)"
+          strokeDasharray="4 8"
+          strokeLinecap="round"
+          strokeWidth="1.4"
+        />
+        {/* Hexagon shapes */}
+        <path
+          className="auth-product-hex"
+          d="M430 560 L488 594 L488 660 L430 694 L372 660 L372 594 Z"
+          stroke="rgba(255,255,255,0.14)"
+          strokeDasharray="8 14"
+          strokeLinecap="round"
+          strokeWidth="1.2"
+        />
+        <path
+          className="auth-product-hex auth-product-hex-2"
+          d="M-14 564 L30 590 L30 642 L-14 668 L-58 642 L-58 590 Z"
+          stroke="rgba(255,255,255,0.12)"
+          strokeDasharray="8 14"
+          strokeLinecap="round"
+          strokeWidth="1.2"
+        />
       </svg>
 
+      {/* ── Top: Logo + badge ── */}
       <div className="relative z-10 flex items-center justify-between">
-        <div className="auth-product-logo flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#0B6FFB]">
-          <GraduationCap size={28} strokeWidth={2.2} />
+        <div className="auth-product-logo flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#0B6FFB]">
+          <GraduationCap size={24} strokeWidth={2.2} />
         </div>
-        <div className="rounded-full border border-white/25 bg-white/12 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/80 backdrop-blur">
-          3 role workspace
+        <div className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 backdrop-blur-sm">
+          <Sparkles size={11} className="text-white/70" />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/70">
+            Terpadu
+          </span>
         </div>
       </div>
 
-      <div className="relative z-10 mx-auto mt-5 w-full max-w-[430px] md:mt-8">
-        <div className="auth-product-screen rounded-[1.35rem] border border-white/20 bg-[#082451]/95 p-3 shadow-[0_26px_70px_rgba(3,18,54,0.34)]">
+      {/* ── Middle: Floating mockup card ── */}
+      <div className="relative z-10 mt-5 md:mt-6">
+        {/* Main mockup window */}
+        <div className="auth-product-screen relative rounded-2xl border border-white/15 bg-[#061d4a]/90 p-3.5 backdrop-blur-sm shadow-[0_20px_60px_rgba(3,18,54,0.4)]">
+          {/* Window chrome */}
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-              <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
+              <span className="h-2.5 w-2.5 rounded-full bg-red-400/90" />
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-300/90" />
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-300/90" />
             </div>
-            <div className="h-2 w-16 rounded-full bg-white/12" />
+            <div className="h-1.5 w-20 rounded-full bg-white/10" />
           </div>
 
-          <div className="grid gap-3 md:grid-cols-[0.72fr_1fr]">
-            <div className="rounded-2xl bg-white/[0.06] p-3">
-              <div className="mb-3 flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-cyan-200">
-                  <BookOpen size={16} />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-wide text-white/40">Satu sistem</p>
-                  <p className="text-sm font-semibold text-white">Tiga akses</p>
-                </div>
+          {/* App header bar */}
+          <div className="mb-3 flex items-center justify-between rounded-xl bg-white/[0.06] px-3 py-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#0B6FFB]/80">
+                <GraduationCap size={12} className="text-white" />
               </div>
-              <div className="space-y-2">
-                {stats.map((item, index) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.label} className="auth-product-stat flex items-center justify-between rounded-xl bg-white/[0.07] px-2.5 py-2" style={{ animationDelay: `${index * 130}ms` }}>
-                      <span className="flex items-center gap-2 text-[11px] text-white/72">
-                        <Icon size={13} />
-                        {item.label}
-                      </span>
-                      <span className="text-xs font-semibold text-white">{item.value}</span>
-                    </div>
-                  );
-                })}
-              </div>
+              <span className="text-[11px] font-semibold text-white/90">Dasbor Utama</span>
             </div>
+            <div className="flex gap-1">
+              {[1,2,3].map(i => (
+                <div key={i} className="h-1.5 w-1.5 rounded-full bg-white/25" />
+              ))}
+            </div>
+          </div>
 
-            <div className="rounded-2xl bg-white/[0.06] p-3">
-              <div className="mb-2 grid grid-cols-[1fr_1fr_0.8fr_0.8fr] gap-2 text-[9px] uppercase tracking-wide text-white/35">
-                <span>Role</span>
-                <span>Modul</span>
-                <span>Jam</span>
-                <span>Status</span>
+          {/* Two columns */}
+          <div className="grid grid-cols-[1fr_1fr] gap-2.5 md:gap-3">
+            {/* Left col: Schedule */}
+            <div className="rounded-xl bg-white/[0.055] p-2.5">
+              <div className="mb-2.5 flex items-center gap-1.5">
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-cyan-300">
+                  <CalendarCheck size={12} />
+                </div>
+                <span className="text-[9px] font-semibold uppercase tracking-wide text-white/50">
+                  Jadwal Hari Ini
+                </span>
               </div>
               <div className="space-y-1.5">
-                {rows.map((row, index) => (
-                  <div key={row.join("-")} className="auth-product-row grid grid-cols-[1fr_1fr_0.8fr_0.8fr] gap-2 rounded-lg bg-white/[0.075] px-2 py-2 text-[10px] text-white/78" style={{ animationDelay: `${index * 120}ms` }}>
-                    {row.map((cell) => (
-                      <span key={cell} className="truncate">{cell}</span>
-                    ))}
+                {scheduleItems.map((item, i) => (
+                  <div
+                    key={item.subject}
+                    className="auth-product-stat flex items-center gap-2 rounded-lg bg-white/[0.065] px-2 py-1.5"
+                    style={{ animationDelay: `${i * 120}ms` }}
+                  >
+                    <span className="min-w-[28px] text-[9px] font-bold tabular-nums text-white/50">{item.time}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[10px] font-semibold text-white/90">{item.subject}</p>
+                      <p className="text-[8.5px] text-white/40">{item.room}</p>
+                    </div>
+                    <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400/70" />
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Right col: Stats */}
+            <div className="flex flex-col gap-2.5">
+              {/* Invoice stat */}
+              <div className="auth-product-stat flex items-center gap-2 rounded-xl bg-white/[0.055] p-2.5">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-400/20 text-amber-300">
+                  <ReceiptText size={13} />
+                </div>
+                <div>
+                  <p className="text-[9px] text-white/45">Invoice</p>
+                  <p className="text-[13px] font-bold text-white">24 Lunas</p>
+                </div>
+              </div>
+
+              {/* Trend stat */}
+              <div className="auth-product-stat flex items-center gap-2 rounded-xl bg-white/[0.055] p-2.5">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-400/20 text-emerald-300">
+                  <TrendingUp size={13} />
+                </div>
+                <div>
+                  <p className="text-[9px] text-white/45">Kehadiran</p>
+                  <p className="text-[13px] font-bold text-white">92%</p>
+                </div>
+              </div>
+
+              {/* Mini bar chart */}
+              <div className="rounded-xl bg-white/[0.055] p-2.5">
+                <p className="mb-2 text-[9px] text-white/40">Aktivitas</p>
+                <div className="flex h-10 items-end gap-1">
+                  {statBars.map((h, i) => (
+                    <div
+                      key={i}
+                      className="auth-product-mini-bar flex-1 rounded-full bg-gradient-to-t from-[#0B6FFB] to-[#36C5F0]"
+                      style={{
+                        height: `${h}%`,
+                        animationDelay: `${i * 85}ms`,
+                        opacity: i === 5 ? 1 : 0.65 + i * 0.05,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="auth-product-float-card absolute -bottom-10 right-2 w-[42%] min-w-[150px] rounded-2xl border border-white/35 bg-white p-3 text-[#0B1220] shadow-[0_22px_48px_rgba(3,18,54,0.22)]">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ringkasan harian</p>
-            <Sparkles size={14} className="text-[#0B6FFB]" />
+        {/* Floating notification chip */}
+        <div className="auth-product-float-card absolute -bottom-8 -right-1 flex items-center gap-2 rounded-2xl border border-white/30 bg-white px-3 py-2.5 text-[#0B1220] shadow-[0_12px_32px_rgba(3,18,54,0.18)]">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100">
+            <span className="text-[10px]">✓</span>
           </div>
-          <div className="flex h-12 items-end gap-1.5">
-            {[44, 64, 48, 76, 58, 88, 72].map((height, index) => (
-              <span key={index} className="auth-product-mini-bar block flex-1 rounded-full bg-gradient-to-t from-[#0B6FFB] to-[#36C5F0]" style={{ height: `${height}%`, animationDelay: `${index * 90}ms` }} />
-            ))}
+          <div>
+            <p className="text-[9px] font-bold text-slate-700">Laporan Selesai</p>
+            <p className="text-[8px] text-slate-400">Tersinkron otomatis</p>
           </div>
         </div>
       </div>
 
-      <div className="relative z-10 mt-14 md:mt-16">
-        <p className="max-w-md text-center text-[1.35rem] font-semibold leading-tight text-white md:text-[1.45rem]">
-          Satu platform untuk admin mengelola, mentor mengajar, dan orang tua memantau perkembangan anak.
+      {/* ── Bottom: Unified copy (NO role enumeration) ── */}
+      <div className="relative z-10 mt-12 md:mt-14">
+        {/* Thin divider */}
+        <div className="mb-4 h-px bg-gradient-to-r from-white/0 via-white/20 to-white/0" />
+
+        <p className="text-center text-[1.32rem] font-bold leading-[1.25] tracking-[-0.015em] text-white md:text-[1.42rem]">
+          Satu dasbor,<br />
+          semua terkendali.
         </p>
-        <p className="mx-auto mt-3 max-w-sm text-center text-sm leading-relaxed text-white/76">
-          Jadwal, absensi, invoice, dan laporan tersinkron otomatis sesuai peran masing-masing.
+        <p className="mx-auto mt-3 max-w-[15rem] text-center text-[0.8rem] leading-relaxed text-white/65">
+          Jadwal, absensi, invoice, dan laporan — otomatis tersinkron setiap saat.
         </p>
       </div>
     </div>
