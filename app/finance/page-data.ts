@@ -34,7 +34,22 @@ export type CashFlowRow = {
   amount: number;
   description: string | null;
   created_at: string;
+  source: "cash_flow" | "payment" | "payroll";
+  deletable: boolean;
 };
+
+function jakartaDateOnly(value: string | null | undefined) {
+  const date = value ? new Date(value) : new Date();
+  if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  if (Number.isNaN(date.getTime())) return value ? value.slice(0, 10) : "";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  return `${parts.find((part) => part.type === "year")?.value}-${parts.find((part) => part.type === "month")?.value}-${parts.find((part) => part.type === "day")?.value}`;
+}
 
 export async function getPayrollWorkspace() {
   const supabase = await createSupabaseServerClient();
@@ -130,9 +145,14 @@ export async function getMentorPayrolls(profileId: string) {
 
 export async function getCashFlowWorkspace() {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("cash_flows").select("*").order("transaction_date", { ascending: false });
+  const [{ data: cashFlows, error }, { data: payments }, { data: paidPayrolls }] = await Promise.all([
+    supabase.from("cash_flows").select("*").order("transaction_date", { ascending: false }),
+    supabase.from("payments").select("id, amount, method, paid_at, created_at"),
+    supabase.from("payrolls").select("id, total_amount, month, year, status, paid_at, created_at, cash_flow_id").eq("status", "paid"),
+  ]);
   if (error) throw new Error(error.message);
-  const rows = (data ?? []).map((row) => ({
+
+  const cashRows = (cashFlows ?? []).map((row) => ({
     id: row.id,
     transaction_date: row.transaction_date,
     type: row.type,
@@ -141,6 +161,36 @@ export async function getCashFlowWorkspace() {
     description: row.description,
     created_at: row.created_at,
   })) as CashFlowRow[];
+  const cashDescriptions = new Set(cashRows.map((row) => row.description ?? ""));
+  const cashIds = new Set(cashRows.map((row) => row.id));
+  const paymentRows = (payments ?? [])
+    .filter((payment) => ![...cashDescriptions].some((description) => description.includes(`[payment:${payment.id}]`)))
+    .map((payment) => ({
+      id: `payment-${payment.id}`,
+      transaction_date: jakartaDateOnly(payment.paid_at ?? payment.created_at),
+      type: "income" as const,
+      category: "Pembayaran SPP",
+      amount: Number(payment.amount ?? 0),
+      description: `Pembayaran SPP (${payment.method ?? "cash"})`,
+      created_at: payment.created_at,
+      source: "payment" as const,
+      deletable: false,
+    }));
+  const payrollRows = (paidPayrolls ?? [])
+    .filter((payroll) => !payroll.cash_flow_id || !cashIds.has(payroll.cash_flow_id))
+    .map((payroll) => ({
+      id: `payroll-${payroll.id}`,
+      transaction_date: jakartaDateOnly(payroll.paid_at ?? payroll.created_at),
+      type: "expense" as const,
+      category: "Gaji Mentor",
+      amount: Number(payroll.total_amount ?? 0),
+      description: `Pembayaran gaji mentor periode ${payroll.month}/${payroll.year}`,
+      created_at: payroll.created_at,
+      source: "payroll" as const,
+      deletable: false,
+    }));
+  const rows = [...cashRows.map((row) => ({ ...row, source: "cash_flow" as const, deletable: true })), ...paymentRows, ...payrollRows]
+    .sort((a, b) => b.transaction_date.localeCompare(a.transaction_date) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   return {
     rows,
     totalIncome: rows.filter((row) => row.type === "income").reduce((sum, row) => sum + row.amount, 0),

@@ -186,9 +186,38 @@ h6 {
   }
 
   .gsm-content .class-card-grid {
+    align-items: stretch;
     gap: 1rem !important;
     grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
     width: 100%;
+  }
+
+  .gsm-content .class-card-grid > .class-card {
+    justify-self: stretch !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .gsm-content .class-mobile-list {
+    display: block;
+    width: 100%;
+  }
+
+  .gsm-content .class-mobile-card {
+    background: #FFFFFF;
+    border: 1px solid #ECEEF5;
+    border-radius: 1rem;
+    margin: 0 0 1rem 0 !important;
+    max-width: none !important;
+    overflow: hidden;
+    width: 100% !important;
+  }
+
+  .gsm-content .class-mobile-card-body {
+    padding: 1rem;
   }
 
   .gsm-content .mt-5,

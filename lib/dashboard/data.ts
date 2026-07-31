@@ -36,6 +36,32 @@ const jakartaPeriod = () => {
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
+function jakartaDateParts(value: string | null) {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-");
+    return { year, month, day };
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  return {
+    year: parts.find((part) => part.type === "year")!.value,
+    month: parts.find((part) => part.type === "month")!.value,
+    day: parts.find((part) => part.type === "day")!.value,
+  };
+}
+
+function jakartaMonthKey(value: string | null) {
+  const parts = jakartaDateParts(value);
+  return parts ? `${parts.year}-${parts.month}` : null;
+}
+
 export type DashboardFinanceActivity = {
   id: string;
   title: string;
@@ -46,14 +72,10 @@ export type DashboardFinanceActivity = {
 };
 
 function buildMonthlyFinanceTrend({
-  payments,
   cashFlows,
-  paidPayrolls,
   months = 12,
 }: {
-  payments: { amount: unknown; paid_at: string | null }[];
   cashFlows: { type: string | null; amount: unknown; transaction_date: string | null }[];
-  paidPayrolls: { total_amount: unknown; paid_at: string | null; created_at: string | null }[];
   months?: number;
 }) {
   const period = jakartaPeriod();
@@ -69,31 +91,12 @@ function buildMonthlyFinanceTrend({
     });
   }
 
-  const keyFromDate = (value: string | null) => {
-    if (!value) return null;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return null;
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-  };
-
-  for (const payment of payments) {
-    const key = keyFromDate(payment.paid_at);
-    const bucket = key ? buckets.get(key) : null;
-    if (bucket) bucket.income += Number(payment.amount ?? 0);
-  }
-
   for (const cashFlow of cashFlows) {
-    const key = keyFromDate(cashFlow.transaction_date);
+    const key = jakartaMonthKey(cashFlow.transaction_date);
     const bucket = key ? buckets.get(key) : null;
     if (!bucket) continue;
     if (cashFlow.type === "income") bucket.income += Number(cashFlow.amount ?? 0);
     if (cashFlow.type === "expense") bucket.expense += Number(cashFlow.amount ?? 0);
-  }
-
-  for (const payroll of paidPayrolls) {
-    const key = keyFromDate(payroll.paid_at ?? payroll.created_at);
-    const bucket = key ? buckets.get(key) : null;
-    if (bucket) bucket.expense += Number(payroll.total_amount ?? 0);
   }
 
   return [...buckets.values()];
@@ -114,9 +117,6 @@ export async function getAdminMetrics() {
     { data: cashFlows },
     { data: monthPayrolls },
     { data: paidPayrolls },
-    { data: recentPayments },
-    { data: recentCashFlows },
-    { data: recentPayrolls },
   ] = await Promise.all([
     supabase.from("students").select("id", { count: "exact", head: true }),
     supabase.from("mentors").select("id", { count: "exact", head: true }),
@@ -124,54 +124,60 @@ export async function getAdminMetrics() {
     supabase.from("student_attendance").select("id", { count: "exact", head: true }),
     supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "unpaid"),
     supabase.from("payments").select("amount").gte("paid_at", monthStart).lt("paid_at", monthEnd),
-    supabase.from("payments").select("amount, paid_at"),
-    supabase.from("cash_flows").select("type, amount, transaction_date"),
+    supabase.from("payments").select("id, amount, method, paid_at, created_at"),
+    supabase.from("cash_flows").select("id, type, category, amount, description, transaction_date, created_at"),
     supabase.from("payrolls").select("total_amount").eq("month", period.month).eq("year", period.year),
-    supabase.from("payrolls").select("total_amount, paid_at, created_at").eq("status", "paid"),
-    supabase.from("payments").select("id, amount, method, paid_at, created_at").order("paid_at", { ascending: false }).limit(5),
-    supabase.from("cash_flows").select("id, type, category, amount, description, transaction_date, created_at").order("transaction_date", { ascending: false }).limit(5),
-    supabase.from("payrolls").select("id, total_amount, month, year, paid_at, created_at").eq("status", "paid").order("paid_at", { ascending: false }).limit(5),
+    supabase.from("payrolls").select("id, total_amount, month, year, paid_at, created_at, cash_flow_id").eq("status", "paid"),
   ]);
   const revenueThisMonth = (monthPayments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
-  const paymentIncome = (allPayments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
-  const cashIncome = (cashFlows ?? []).filter((row) => row.type === "income").reduce((sum, row) => sum + Number(row.amount), 0);
-  const cashExpense = (cashFlows ?? []).filter((row) => row.type === "expense").reduce((sum, row) => sum + Number(row.amount), 0);
-  const paidPayrollExpense = (paidPayrolls ?? []).reduce((sum, row) => sum + Number(row.total_amount), 0);
+  const cashDescriptions = new Set((cashFlows ?? []).map((row) => row.description ?? ""));
+  const cashIds = new Set((cashFlows ?? []).map((row) => row.id));
+  const ledgerRows = [
+    ...(cashFlows ?? []).map((row) => ({
+      id: `cash-${row.id}`,
+      title: row.category === "Pembayaran SPP"
+        ? "Pembayaran SPP"
+        : row.category === "Gaji Mentor"
+          ? "Gaji Mentor Dibayar"
+          : row.type === "income" ? "Kas Masuk" : "Kas Keluar",
+      detail: row.description || row.category || "Transaksi kas",
+      amount: Number(row.amount ?? 0),
+      type: row.type === "income" ? ("income" as const) : ("expense" as const),
+      date: row.transaction_date ?? row.created_at,
+    })),
+    ...(allPayments ?? [])
+      .filter((payment) => ![...cashDescriptions].some((description) => description.includes(`[payment:${payment.id}]`)))
+      .map((payment) => ({
+        id: `payment-${payment.id}`,
+        title: "Pembayaran SPP",
+        detail: `Metode ${payment.method ?? "cash"}`,
+        amount: Number(payment.amount ?? 0),
+        type: "income" as const,
+        date: payment.paid_at ?? payment.created_at,
+      })),
+    ...(paidPayrolls ?? [])
+      .filter((payroll) => !payroll.cash_flow_id || !cashIds.has(payroll.cash_flow_id))
+      .map((payroll) => ({
+        id: `payroll-${payroll.id}`,
+        title: "Gaji Mentor Dibayar",
+        detail: `${MONTH_LABELS[(payroll.month ?? 1) - 1] ?? "Periode"} ${payroll.year ?? ""}`.trim(),
+        amount: Number(payroll.total_amount ?? 0),
+        type: "expense" as const,
+        date: payroll.paid_at ?? payroll.created_at,
+      })),
+  ];
+  const paymentIncome = ledgerRows.filter((row) => row.type === "income" && row.title === "Pembayaran SPP").reduce((sum, row) => sum + row.amount, 0);
+  const cashIncome = ledgerRows.filter((row) => row.type === "income" && row.title !== "Pembayaran SPP").reduce((sum, row) => sum + row.amount, 0);
+  const paidPayrollExpense = ledgerRows.filter((row) => row.type === "expense" && row.title === "Gaji Mentor Dibayar").reduce((sum, row) => sum + row.amount, 0);
+  const cashExpense = ledgerRows.filter((row) => row.type === "expense" && row.title !== "Gaji Mentor Dibayar").reduce((sum, row) => sum + row.amount, 0);
   const payrollThisMonth = (monthPayrolls ?? []).reduce((sum, row) => sum + Number(row.total_amount), 0);
   const totalCashIn = paymentIncome + cashIncome;
-  const totalCashOut = cashExpense + paidPayrollExpense;
+  const totalCashOut = paidPayrollExpense + cashExpense;
   const cashBalance = totalCashIn - totalCashOut;
   const financeTrend = buildMonthlyFinanceTrend({
-    payments: allPayments ?? [],
-    cashFlows: cashFlows ?? [],
-    paidPayrolls: paidPayrolls ?? [],
+    cashFlows: ledgerRows.map((row) => ({ type: row.type, amount: row.amount, transaction_date: row.date })),
   });
-  const financeActivities: DashboardFinanceActivity[] = [
-    ...(recentPayments ?? []).map((payment) => ({
-      id: `payment-${payment.id}`,
-      title: "Pembayaran SPP",
-      detail: `Metode ${payment.method ?? "cash"}`,
-      amount: Number(payment.amount ?? 0),
-      type: "income" as const,
-      date: payment.paid_at ?? payment.created_at,
-    })),
-    ...(recentCashFlows ?? []).map((cashFlow) => ({
-      id: `cash-${cashFlow.id}`,
-      title: cashFlow.type === "income" ? "Kas Masuk" : "Kas Keluar",
-      detail: cashFlow.description || cashFlow.category || "Transaksi kas manual",
-      amount: Number(cashFlow.amount ?? 0),
-      type: cashFlow.type === "income" ? ("income" as const) : ("expense" as const),
-      date: cashFlow.transaction_date ?? cashFlow.created_at,
-    })),
-    ...(recentPayrolls ?? []).map((payroll) => ({
-      id: `payroll-${payroll.id}`,
-      title: "Gaji Mentor Dibayar",
-      detail: `${MONTH_LABELS[(payroll.month ?? 1) - 1] ?? "Periode"} ${payroll.year ?? ""}`.trim(),
-      amount: Number(payroll.total_amount ?? 0),
-      type: "expense" as const,
-      date: payroll.paid_at ?? payroll.created_at,
-    })),
-  ]
+  const financeActivities: DashboardFinanceActivity[] = ledgerRows
     .filter((activity) => activity.date)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);

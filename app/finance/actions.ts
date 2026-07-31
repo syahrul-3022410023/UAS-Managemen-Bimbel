@@ -43,6 +43,16 @@ function monthRange(year: number, month: number) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+function jakartaDateOnly(value: Date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  return `${parts.find((part) => part.type === "year")?.value}-${parts.find((part) => part.type === "month")?.value}-${parts.find((part) => part.type === "day")?.value}`;
+}
+
 export async function generateCurrentPayroll(raw: Record<string, unknown> = {}) {
   const user = await requireRole(["admin"]);
   const supabase = await createSupabaseServerClient();
@@ -167,7 +177,7 @@ export async function markPayrollPaid(payrollId: string) {
   const { data: cashFlow, error: cashError } = await supabase
     .from("cash_flows")
     .insert({
-      transaction_date: new Date().toISOString().slice(0, 10),
+      transaction_date: jakartaDateOnly(),
       type: "expense",
       category: "Gaji Mentor",
       amount: Number(payroll.total_amount),

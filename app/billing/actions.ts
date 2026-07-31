@@ -36,6 +36,26 @@ function dateOnly(value: string) {
   return value.slice(0, 10);
 }
 
+function jakartaLocalDateTimeToIso(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value) && !/[zZ]|[+-]\d{2}:\d{2}$/.test(value)) {
+    const localValue = value.length === 16 ? `${value}:00` : value;
+    return new Date(`${localValue}+07:00`).toISOString();
+  }
+  return new Date(value).toISOString();
+}
+
+function jakartaDateOnly(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return dateOnly(value);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  return `${parts.find((part) => part.type === "year")?.value}-${parts.find((part) => part.type === "month")?.value}-${parts.find((part) => part.type === "day")?.value}`;
+}
+
 function paymentCashFlowMarker(paymentId: string) {
   return `[payment:${paymentId}]`;
 }
@@ -208,6 +228,7 @@ export async function savePayment(invoiceId: string, raw: Record<string, unknown
     .select("full_name")
     .eq("id", invoice.student_id)
     .maybeSingle();
+  const paidAt = jakartaLocalDateTimeToIso(result.data.paid_at);
 
   // Insert payment
   const { data: payment, error: payError } = await supabase.from("payments").insert({
@@ -216,7 +237,7 @@ export async function savePayment(invoiceId: string, raw: Record<string, unknown
     method: result.data.method,
     reference_number: result.data.reference_number ?? null,
     notes: result.data.notes ?? null,
-    paid_at: result.data.paid_at,
+    paid_at: paidAt,
     recorded_by: user.id,
   }).select("id").single();
 
@@ -225,7 +246,7 @@ export async function savePayment(invoiceId: string, raw: Record<string, unknown
   const { data: cashFlow, error: cashError } = await supabase
     .from("cash_flows")
     .insert({
-      transaction_date: dateOnly(result.data.paid_at),
+      transaction_date: jakartaDateOnly(paidAt),
       type: "income",
       category: "Pembayaran SPP",
       amount: result.data.amount,

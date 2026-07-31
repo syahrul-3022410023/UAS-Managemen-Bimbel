@@ -58,6 +58,11 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
   });
 
   const remove = (id: string) => {
+    const row = rows.find((item) => item.id === id);
+    if (row && !row.deletable) {
+      setMessage("Transaksi otomatis dari invoice/payroll dihapus dari menu asalnya.");
+      return;
+    }
     setDeletingId(id);
   };
 
@@ -86,9 +91,9 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
         {message && <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{message}</div>}
 
         <div className="grid gap-4 md:grid-cols-3">
-          <CashCard label="Masuk Manual" value={formatRp(totalIncome)} tone="income" />
-          <CashCard label="Keluar Manual" value={formatRp(totalExpense)} tone="expense" />
-          <CashCard label="Saldo Manual" value={formatRp(totalIncome - totalExpense)} tone="balance" />
+          <CashCard label="Kas Masuk" value={formatRp(totalIncome)} tone="income" />
+          <CashCard label="Kas Keluar" value={formatRp(totalExpense)} tone="expense" />
+          <CashCard label="Saldo Kas" value={formatRp(totalIncome - totalExpense)} tone="balance" />
         </div>
 
         <DataTableShell
@@ -117,7 +122,7 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
                 <p className={`mt-3 text-lg font-bold ${row.type === "income" ? "text-emerald-600" : "text-red-600"}`}>{formatRp(row.amount)}</p>
                 {row.description && <p className="mt-2 text-sm leading-relaxed text-slate-500">{row.description}</p>}
                 <div className="mt-4 flex justify-end">
-                  <button onClick={() => remove(row.id)} disabled={isPending} className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50">
+                  <button onClick={() => remove(row.id)} disabled={isPending || !row.deletable} className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50">
                     <Trash2 size={15} /> Hapus
                   </button>
                 </div>
@@ -159,7 +164,7 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
                     <td className={`px-5 py-4 font-bold ${row.type === "income" ? "text-emerald-600" : "text-red-600"}`}>{formatRp(row.amount)}</td>
                     <td className="max-w-[260px] truncate px-5 py-4 text-slate-500">{row.description ?? "-"}</td>
                     <td className="px-5 py-4 text-right">
-                      <button onClick={() => remove(row.id)} disabled={isPending} className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600 transition hover:bg-red-100 disabled:opacity-50" aria-label="Hapus transaksi">
+                      <button onClick={() => remove(row.id)} disabled={isPending || !row.deletable} className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600 transition hover:bg-red-100 disabled:opacity-50" aria-label="Hapus transaksi">
                         <Trash2 size={17} />
                       </button>
                     </td>
@@ -225,7 +230,7 @@ export function CashFlowManager({ rows, totalIncome, totalExpense }: { rows: Cas
 }
 
 function CashCard({ label, value, tone }: { label: string; value: string; tone: "income" | "expense" | "balance" }) {
-  const detail = tone === "balance" ? "Masuk manual - keluar manual" : "Transaksi arus kas manual";
+  const detail = tone === "balance" ? "Kas masuk - kas keluar" : "Transaksi arus kas";
   return <KpiCard icon={tone === "expense" ? ArrowUpRight : ArrowDownLeft} label={label} value={value} detail={detail} tone={tone} />;
 }
 

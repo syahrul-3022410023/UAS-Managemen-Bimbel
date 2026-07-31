@@ -106,9 +106,9 @@ export function ClassManager({ rows, packages, mentors }: Props) {
           ))}
         </div>
 
-        <div className="class-card-grid grid gap-4 sm:gap-5 xl:grid-cols-2">
+        <div className="class-card-grid hidden gap-4 sm:grid sm:gap-5 xl:grid-cols-2">
           {visibleRows.map((row) => (
-            <article key={row.id} className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-apple-soft">
+            <article key={row.id} className="class-card w-full justify-self-stretch overflow-hidden rounded-xl border border-slate-100 bg-white shadow-apple-soft">
               <div className="p-4 sm:p-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
@@ -161,6 +161,53 @@ export function ClassManager({ rows, packages, mentors }: Props) {
 
           {visibleRows.length === 0 && (
             <div className="rounded-2xl border border-dashed border-brand/25 bg-[#FAFCFF] p-12 text-center font-medium text-[#55708F] lg:col-span-2">
+              {packageFilter ? "Belum ada kelas di paket ini." : "Belum ada kelas. Tambahkan kelas pertama untuk memulai."}
+            </div>
+          )}
+        </div>
+
+        <div className="class-mobile-list sm:hidden">
+          {visibleRows.map((row) => (
+            <article key={row.id} className="class-mobile-card">
+              <div className="class-mobile-card-body">
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {row.package_names.length ? row.package_names.map((name) => (
+                    <span key={name} className="rounded-full bg-[#EEF0FF] px-2.5 py-1 text-xs font-bold text-brand">{name}</span>
+                  )) : (
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500">Belum masuk paket</span>
+                  )}
+                </div>
+                <h2 className="mt-3 text-xl font-bold leading-tight text-ink">{row.name}</h2>
+                <div className="mt-3 flex flex-wrap items-center gap-1.5 text-sm text-slate-500">
+                  <span className="mr-1 shrink-0 text-slate-600">Mentor:</span>
+                  {row.mentor_names.length ? row.mentor_names.map((name) => (
+                    <span key={name} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">{name}</span>
+                  )) : (
+                    <span>Belum ada mentor</span>
+                  )}
+                </div>
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                  <Metric label="Siswa" value={`${row.student_ids.length}/${row.capacity}`} />
+                  <Metric label="Fee" value={formatShortCurrency(row.mentor_fee_per_session)} />
+                </div>
+                <div className="mt-4 border-t border-slate-100 pt-4">
+                  <p className="text-xs font-semibold uppercase text-slate-400">Siswa otomatis dari paket</p>
+                  <PackageGroups groups={packageFilter ? row.package_groups.filter((group) => group.id === packageFilter) : row.package_groups} fallbackNames={row.student_names} />
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-1 border-t border-slate-100 bg-slate-50/60 px-3 py-2">
+                <button onClick={() => setEditing(row)} className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 hover:bg-brand/10 hover:text-brand" aria-label="Edit kelas">
+                  <Pencil size={17} />
+                </button>
+                <button onClick={() => remove(row.id)} className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600" aria-label="Hapus kelas">
+                  <Trash2 size={17} />
+                </button>
+              </div>
+            </article>
+          ))}
+
+          {visibleRows.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-brand/25 bg-[#FAFCFF] p-8 text-center font-medium text-[#55708F]">
               {packageFilter ? "Belum ada kelas di paket ini." : "Belum ada kelas. Tambahkan kelas pertama untuk memulai."}
             </div>
           )}
